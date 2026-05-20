@@ -1,4 +1,5 @@
 import type { mastodon } from "masto";
+import { kvGet, kvSet } from "./storage/kv";
 
 export const DEFAULT_INSTANCE = "https://mastodon.social";
 
@@ -180,11 +181,18 @@ export async function lookupAccount(
 	accessToken?: string,
 ): Promise<mastodon.v1.Account> {
 	const cacheKey = `subee:account:${instanceUrl}:${username}`;
-	const cached = lsGet<mastodon.v1.Account>(cacheKey, ACCOUNT_CACHE_TTL);
+	const cached = await kvGet<mastodon.v1.Account>(cacheKey, ACCOUNT_CACHE_TTL);
 	if (cached) return cached;
+	// Migrate legacy localStorage entry if present
+	const legacy = lsGet<mastodon.v1.Account>(cacheKey, ACCOUNT_CACHE_TTL);
+	if (legacy) {
+		localStorage.removeItem(cacheKey);
+		await kvSet(cacheKey, legacy);
+		return legacy;
+	}
 	const url = `${instanceBase(instanceUrl)}/api/v1/accounts/lookup?acct=${encodeURIComponent(username)}`;
 	const account = await apiFetch<mastodon.v1.Account>(url, accessToken);
-	lsSet(cacheKey, account);
+	await kvSet(cacheKey, account);
 	return account;
 }
 

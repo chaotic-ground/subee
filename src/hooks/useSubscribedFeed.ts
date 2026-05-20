@@ -1,25 +1,19 @@
 import { orderBy } from "lodash";
 import type { mastodon } from "masto";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	fetchAccountStatuses,
-	lookupAccount,
-	lsGet,
-	lsSet,
-	parseHandle,
-} from "../mastodon";
+import { fetchAccountStatuses, lookupAccount, parseHandle } from "../mastodon";
 import {
 	type AccountCursor,
 	loadCursorCache,
 	saveCursorCache,
 } from "../storage/cursors";
+import { loadPostCache, savePostCache } from "../storage/posts";
 
 const PAGE_SIZE = 20;
 const CONCURRENCY = 10;
 const FLUSH_EVERY = 20; // update UI after every N accounts complete
 const POLL_CONCURRENCY = 3;
 const MAX_CACHED_POSTS = 200;
-const POST_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days (matches cursor cache)
 
 export type { AccountCursor };
 
@@ -63,14 +57,21 @@ export function useSubscribedFeed(
 	instanceUrl: string,
 	accessToken: string,
 ) {
-	const [posts, setPosts] = useState<mastodon.v1.Status[]>(
-		// Restore cached posts immediately on first render
-		() =>
-			lsGet<mastodon.v1.Status[]>(
-				`subee:posts:${instanceUrl}`,
-				POST_CACHE_TTL,
-			) ?? [],
-	);
+	const [posts, setPosts] = useState<mastodon.v1.Status[]>([]);
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			const cached = await loadPostCache(instanceUrl);
+			if (cancelled || !cached || cached.length === 0) return;
+			// Only adopt cache if no posts have arrived yet (network may have
+			// raced ahead of disk read on slow IDB).
+			setPosts((prev) => (prev.length === 0 ? cached : prev));
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [instanceUrl]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [progress, setProgress] = useState<FeedProgress | null>(null);
@@ -103,7 +104,7 @@ export function useSubscribedFeed(
 			const all = [...prev, ...toAdd];
 			const deduped = [...new Map(all.map((p) => [p.id, p])).values()];
 			const sorted = orderBy(deduped, (p) => p.createdAt, "desc");
-			lsSet(`subee:posts:${instanceUrl}`, sorted.slice(0, MAX_CACHED_POSTS));
+			void savePostCache(instanceUrl, sorted.slice(0, MAX_CACHED_POSTS));
 			return sorted;
 		});
 	}, [instanceUrl]);

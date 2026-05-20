@@ -7,17 +7,20 @@ const RESTRICTED_KEY = `subee:misskey:restricted:${HOSTNAME}`;
 const IS_MISSKEY_KEY = `subee:misskey:is:${HOSTNAME}`;
 
 async function setMisskeyTrue(page: import("@playwright/test").Page) {
-	await page.evaluate(
-		([key, val]) => localStorage.setItem(key, val),
-		[IS_MISSKEY_KEY, "true"],
-	);
+	await page.evaluate(async (key) => {
+		const mod = await import("/src/storage/kv.ts");
+		await mod.kvSet(key, "true");
+	}, IS_MISSKEY_KEY);
 }
 
-async function getLsItem(
+async function getKvItem<T>(
 	page: import("@playwright/test").Page,
 	key: string,
-): Promise<string | null> {
-	return page.evaluate((k) => localStorage.getItem(k), key);
+): Promise<T | null> {
+	return page.evaluate(async (k) => {
+		const mod = await import("/src/storage/kv.ts");
+		return mod.kvGet(k);
+	}, key);
 }
 
 test.describe("Misskey reaction caching", () => {
@@ -53,8 +56,8 @@ test.describe("Misskey reaction caching", () => {
 		}, NOTE_URL);
 
 		expect(notesShowCallCount).toBe(1);
-		const restrictedRaw = await getLsItem(page, RESTRICTED_KEY);
-		expect(restrictedRaw).not.toBeNull();
+		const restricted = await getKvItem<boolean>(page, RESTRICTED_KEY);
+		expect(restricted).not.toBeNull();
 
 		// Second call — should be skipped due to cache
 		await page.evaluate(async (url) => {
@@ -81,8 +84,8 @@ test.describe("Misskey reaction caching", () => {
 		}, NOTE_URL);
 
 		expect(notesShowCallCount).toBe(1);
-		const restrictedRaw = await getLsItem(page, RESTRICTED_KEY);
-		expect(restrictedRaw).not.toBeNull();
+		const restricted = await getKvItem<boolean>(page, RESTRICTED_KEY);
+		expect(restricted).not.toBeNull();
 
 		// Second call — should be skipped
 		await page.evaluate(async (url) => {
