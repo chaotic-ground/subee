@@ -8,24 +8,20 @@ import {
 	lsSet,
 	parseHandle,
 } from "../mastodon";
+import {
+	type AccountCursor,
+	loadCursorCache,
+	saveCursorCache,
+} from "../storage/cursors";
 
 const PAGE_SIZE = 20;
 const CONCURRENCY = 10;
 const FLUSH_EVERY = 20; // update UI after every N accounts complete
 const POLL_CONCURRENCY = 3;
 const MAX_CACHED_POSTS = 200;
-const CURSOR_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 const POST_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days (matches cursor cache)
 
-interface AccountCursor {
-	accountId: string;
-	instanceUrl: string;
-	handle: string;
-	maxId?: string;
-	sinceId?: string;
-	done: boolean;
-	lastPolledAt?: number;
-}
+export type { AccountCursor };
 
 export interface FeedProgress {
 	done: number;
@@ -225,11 +221,8 @@ export function useSubscribedFeed(
 		setError(null);
 
 		if (!initializedRef.current) {
-			// Try to restore cursors from cache
-			const cachedCursors = lsGet<[string, AccountCursor][]>(
-				`subee:cursors:${instanceUrl}`,
-				CURSOR_CACHE_TTL,
-			);
+			// Try to restore cursors from cache (IDB; migrates legacy localStorage)
+			const cachedCursors = await loadCursorCache(instanceUrl);
 			if (!cachedCursors) {
 				console.warn(
 					"[subee] cursor cache not found or expired for",
@@ -315,7 +308,7 @@ export function useSubscribedFeed(
 		} catch (e) {
 			setError(String(e));
 		} finally {
-			lsSet(`subee:cursors:${instanceUrl}`, [...cursorsRef.current.entries()]);
+			await saveCursorCache(instanceUrl, [...cursorsRef.current.entries()]);
 			loadingRef.current = false;
 			setLoading(false);
 			setProgress(null);
