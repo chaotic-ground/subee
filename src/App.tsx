@@ -9,6 +9,13 @@ import { LoginPage } from "./pages/LoginPage";
 import { PublicPage } from "./pages/PublicPage";
 import { SubscribedPage } from "./pages/SubscribedPage";
 import { importHandles } from "./store/subscriptions";
+import {
+	isPeriodicSyncSupported,
+	loadBgSyncEnabled,
+	registerPeriodicSync,
+	saveBgSyncEnabled,
+	unregisterPeriodicSync,
+} from "./sync/registerPeriodicSync";
 
 type Tab = "public" | "subscribed";
 
@@ -34,6 +41,36 @@ export default function App() {
 	const [excludeSubscribed, setExcludeSubscribed] = useState(
 		() => localStorage.getItem("subee:excludeSubscribed") === "true",
 	);
+	const bgSyncSupported = isPeriodicSyncSupported();
+	const [bgSyncEnabled, setBgSyncEnabled] = useState(false);
+
+	useEffect(() => {
+		if (!bgSyncSupported) return;
+		let cancelled = false;
+		(async () => {
+			const enabled = await loadBgSyncEnabled();
+			if (cancelled) return;
+			setBgSyncEnabled(enabled);
+			if (enabled) await registerPeriodicSync();
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [bgSyncSupported]);
+
+	const handleToggleBgSync = async (v: boolean) => {
+		setBgSyncEnabled(v);
+		await saveBgSyncEnabled(v);
+		if (v) {
+			const result = await registerPeriodicSync();
+			if (result !== "granted") {
+				setBgSyncEnabled(false);
+				await saveBgSyncEnabled(false);
+			}
+		} else {
+			await unregisterPeriodicSync();
+		}
+	};
 	const publicScrollRef = useRef<HTMLDivElement>(null);
 	const subscribedScrollRef = useRef<HTMLDivElement>(null);
 	const {
@@ -161,6 +198,9 @@ export default function App() {
 				onAddAccountClick={() => setShowAddAccount(true)}
 				excludeSubscribed={excludeSubscribed}
 				onToggleExcludeSubscribed={handleToggleExcludeSubscribed}
+				bgSyncSupported={bgSyncSupported}
+				bgSyncEnabled={bgSyncEnabled}
+				onToggleBgSync={handleToggleBgSync}
 			/>
 
 			{showAddAccount && (

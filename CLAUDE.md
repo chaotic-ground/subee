@@ -44,6 +44,7 @@
 - **Import subscriptions** — 텍스트로 구독 목록을 일괄 교체.
 - **Subscribe to account** — 단일 handle을 구독 목록에 추가.
 - **Exclude subscribed** — 체크 시 Subscribed 탭의 게시물에서 이미 구독한 계정 게시물을 Home 탭에서 숨김.
+- **Background sync** — 체크 시 브라우저가 백그라운드(앱 닫혀 있을 때 포함)에서 주기적으로 새 게시물을 폴링. minInterval 12시간이지만 실제 간격은 브라우저가 결정. 지원하지 않는 브라우저(Firefox/Safari)에서는 항목 숨김. 권한이 거부되면 자동으로 off로 되돌아감.
 - **Log out** — 탭 시 "Log out? / Yes / Cancel" 확인 후 로그아웃.
 
 ### 게시물 카드

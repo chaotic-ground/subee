@@ -5,6 +5,7 @@ import { precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst } from "workbox-strategies";
 import { loadAuth } from "../store/auth";
+import { FEED_SYNC_TAG } from "../sync/feedSync";
 import { pollFeed } from "../sync/pollFeed";
 
 declare const self: ServiceWorkerGlobalScope;
@@ -23,8 +24,6 @@ registerRoute(
 		],
 	}),
 );
-
-export const FEED_SYNC_TAG = "subee-feed-sync";
 
 async function runFeedSync(): Promise<void> {
 	try {

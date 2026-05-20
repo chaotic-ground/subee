@@ -21,6 +21,9 @@ interface AppHeaderProps {
 	onAddAccountClick: () => void;
 	excludeSubscribed: boolean;
 	onToggleExcludeSubscribed: (v: boolean) => void;
+	bgSyncSupported: boolean;
+	bgSyncEnabled: boolean;
+	onToggleBgSync: (v: boolean) => void;
 }
 
 export function AppHeader({
@@ -33,6 +36,9 @@ export function AppHeader({
 	onAddAccountClick,
 	excludeSubscribed,
 	onToggleExcludeSubscribed,
+	bgSyncSupported,
+	bgSyncEnabled,
+	onToggleBgSync,
 }: AppHeaderProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
@@ -150,6 +156,16 @@ export function AppHeader({
 									/>
 									Exclude subscribed
 								</label>
+								{bgSyncSupported && (
+									<label className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+										<input
+											type="checkbox"
+											checked={bgSyncEnabled}
+											onChange={(e) => onToggleBgSync(e.target.checked)}
+										/>
+										Background sync
+									</label>
+								)}
 								<div className="border-t border-gray-200 dark:border-gray-700">
 									{confirmingLogout ? (
 										<div className="flex items-center gap-2 px-4 py-2 text-sm">
