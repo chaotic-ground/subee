@@ -80,6 +80,10 @@ function MediaAttachments({
 			className={`grid gap-1 mt-2 ${images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
 		>
 			{attachments.map((attachment) => {
+				const width = attachment.meta?.original?.width;
+				const height = attachment.meta?.original?.height;
+				const aspectRatio =
+					width && height ? `${width} / ${height}` : undefined;
 				if (attachment.type === "image" || attachment.type === "gifv") {
 					return (
 						<a
@@ -87,13 +91,16 @@ function MediaAttachments({
 							href={attachment.url ?? "#"}
 							target="_blank"
 							rel="noopener noreferrer"
+							className="block w-full bg-gray-100 dark:bg-gray-800 rounded overflow-hidden"
+							style={aspectRatio ? { aspectRatio } : undefined}
 						>
 							<LazyLoadImage
 								src={attachment.previewUrl ?? attachment.url ?? ""}
 								alt={attachment.description ?? ""}
-								className="rounded w-full object-cover max-h-64"
+								className="w-full h-full object-cover"
+								wrapperClassName="w-full h-full"
 								placeholder={
-									<div className="rounded w-full h-48 animate-pulse bg-gray-200 dark:bg-gray-700" />
+									<div className="w-full h-full animate-pulse bg-gray-200 dark:bg-gray-700" />
 								}
 							/>
 						</a>
@@ -106,7 +113,10 @@ function MediaAttachments({
 							key={attachment.id}
 							src={attachment.url ?? ""}
 							controls
+							width={width}
+							height={height}
 							className="rounded w-full max-h-64"
+							style={aspectRatio ? { aspectRatio } : undefined}
 						/>
 					);
 				}
@@ -119,6 +129,9 @@ function MediaAttachments({
 function CardPreview({ card }: { card: mastodon.v1.PreviewCard | null }) {
 	if (!card || !card.url) return null;
 
+	const aspectRatio =
+		card.width && card.height ? `${card.width} / ${card.height}` : undefined;
+
 	return (
 		<a
 			href={card.url}
@@ -127,14 +140,20 @@ function CardPreview({ card }: { card: mastodon.v1.PreviewCard | null }) {
 			className="block mt-2 border rounded overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 		>
 			{card.image && (
-				<LazyLoadImage
-					src={card.image}
-					alt={card.title ?? ""}
-					className="w-full object-cover max-h-40"
-					placeholder={
-						<div className="w-full h-32 animate-pulse bg-gray-200 dark:bg-gray-700" />
-					}
-				/>
+				<div
+					className="w-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
+					style={aspectRatio ? { aspectRatio } : undefined}
+				>
+					<LazyLoadImage
+						src={card.image}
+						alt={card.title ?? ""}
+						className="w-full h-full object-cover"
+						wrapperClassName="w-full h-full"
+						placeholder={
+							<div className="w-full h-full animate-pulse bg-gray-200 dark:bg-gray-700" />
+						}
+					/>
+				</div>
 			)}
 			<div className="p-2">
 				<div className="font-medium text-sm line-clamp-2">{card.title}</div>
