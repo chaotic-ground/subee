@@ -13,7 +13,6 @@ interface SubscribedPageProps {
 	isSubscribed: (handle: string) => boolean;
 	initialScrollY: number;
 	scrollContainerRef: RefObject<HTMLDivElement | null>;
-	excludeSubscribed: boolean;
 }
 
 export function SubscribedPage({
@@ -24,7 +23,6 @@ export function SubscribedPage({
 	isSubscribed,
 	initialScrollY,
 	scrollContainerRef,
-	excludeSubscribed,
 }: SubscribedPageProps) {
 	const {
 		posts,
@@ -102,7 +100,6 @@ export function SubscribedPage({
 			{showGrid && <AccountStatusGrid statuses={accountStatuses} />}
 			<PostList
 				posts={posts}
-				excludeSubscribed={excludeSubscribed}
 				loading={loading}
 				error={error}
 				onLoadMore={fetchMore}

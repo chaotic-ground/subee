@@ -196,7 +196,6 @@ export default function App() {
 							isSubscribed={isSubscribed}
 							initialScrollY={readScroll("subscribed")}
 							scrollContainerRef={subscribedScrollRef}
-							excludeSubscribed={excludeSubscribed}
 						/>
 					</div>
 				</div>
