@@ -4,6 +4,8 @@ import { ExpirationPlugin } from "workbox-expiration";
 import { precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst } from "workbox-strategies";
+import { loadAuth } from "../store/auth";
+import { pollFeed } from "../sync/pollFeed";
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -22,7 +24,23 @@ registerRoute(
 	}),
 );
 
+export const FEED_SYNC_TAG = "subee-feed-sync";
+
+async function runFeedSync(): Promise<void> {
+	try {
+		const auth = await loadAuth();
+		if (!auth) return;
+		await pollFeed({
+			instanceUrl: auth.instanceUrl,
+			accessToken: auth.accessToken,
+		});
+	} catch {
+		// silent fail — wait for the next sync
+	}
+}
+
 self.addEventListener("periodicsync", (event) => {
 	const e = event as ExtendableEvent & { tag: string };
-	console.log("periodicsync", e.tag);
+	if (e.tag !== FEED_SYNC_TAG) return;
+	e.waitUntil(runFeedSync());
 });
