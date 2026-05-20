@@ -8,11 +8,12 @@ import {
 	saveCursorCache,
 } from "../storage/cursors";
 import { loadPostCache, savePostCache } from "../storage/posts";
+import { concurrent } from "../sync/concurrent";
+import { pollFeed } from "../sync/pollFeed";
 
 const PAGE_SIZE = 20;
 const CONCURRENCY = 10;
 const FLUSH_EVERY = 20; // update UI after every N accounts complete
-const POLL_CONCURRENCY = 3;
 const MAX_CACHED_POSTS = 200;
 
 export type { AccountCursor };
@@ -34,23 +35,6 @@ export type AccountLoadStatus =
 	| "loading"
 	| "done"
 	| "failed";
-
-// Run tasks with a fixed concurrency limit.
-// Safe in single-threaded JS: the index increment is synchronous.
-async function concurrent(
-	tasks: (() => Promise<void>)[],
-	limit: number,
-): Promise<void> {
-	let i = 0;
-	const worker = async () => {
-		while (i < tasks.length) {
-			await tasks[i++]();
-		}
-	};
-	await Promise.all(
-		Array.from({ length: Math.min(limit, tasks.length) }, worker),
-	);
-}
 
 export function useSubscribedFeed(
 	handles: Set<string>,
@@ -169,39 +153,17 @@ export function useSubscribedFeed(
 			return;
 		pollingRef.current = true;
 		try {
-			const cursors = [...cursorsRef.current.values()]
-				.filter((c) => c.sinceId)
-				.sort((a, b) => (a.lastPolledAt ?? 0) - (b.lastPolledAt ?? 0));
-			if (cursors.length === 0) return;
-			let done = 0;
-			setPollProgress({ done: 0, total: cursors.length });
-			const cycleBuffer: mastodon.v1.Status[] = [];
-			await concurrent(
-				cursors.map((cursor) => async () => {
-					try {
-						const results = await fetchAccountStatuses(
-							cursor.instanceUrl,
-							cursor.accountId,
-							{ sinceId: cursor.sinceId, limit: PAGE_SIZE },
-							accessToken,
-						);
-						cursorsRef.current.set(cursor.handle, {
-							...cursor,
-							...(results.length > 0 && { sinceId: results[0].id }),
-							lastPolledAt: Date.now(),
-						});
-						if (results.length > 0) {
-							cycleBuffer.push(...results);
-						}
-					} catch {
-						// silently ignore poll errors
-					}
-					setPollProgress({ done: ++done, total: cursors.length });
-				}),
-				POLL_CONCURRENCY,
-			);
-			if (cycleBuffer.length > 0) {
-				bufferRef.current.push(...cycleBuffer);
+			const { newPosts } = await pollFeed({
+				instanceUrl,
+				accessToken,
+				onProgress: (done, total) => setPollProgress({ done, total }),
+			});
+			// Refresh in-memory cursors map so callers (initCursors retries, etc.)
+			// see the updated sinceId/lastPolledAt persisted by pollFeed.
+			const refreshed = await loadCursorCache(instanceUrl);
+			if (refreshed) cursorsRef.current = new Map(refreshed);
+			if (newPosts.length > 0) {
+				bufferRef.current.push(...newPosts);
 				setStagedCount(bufferRef.current.length);
 			}
 		} finally {
@@ -209,7 +171,7 @@ export function useSubscribedFeed(
 			setPollProgress(null);
 			setLastPollTime(Date.now());
 		}
-	}, [accessToken]);
+	}, [instanceUrl, accessToken]);
 
 	const triggerPoll = useCallback(() => {
 		poll();
