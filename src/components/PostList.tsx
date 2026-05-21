@@ -134,7 +134,13 @@ export function PostList({
 								<div className="flex-1 h-px bg-blue-300 dark:bg-blue-700" />
 							</div>
 						)}
-						<div data-subscribed={subscribed || undefined}>
+						<div
+							data-subscribed={subscribed || undefined}
+							style={{
+								contentVisibility: "auto",
+								containIntrinsicSize: "auto 400px",
+							}}
+						>
 							<PostCard
 								status={status}
 								instanceUrl={instanceUrl}
