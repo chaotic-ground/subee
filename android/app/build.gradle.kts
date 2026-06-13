@@ -13,7 +13,7 @@ android {
         targetSdk = 34
 
         // Kept in sync with package.json by release-please
-        val versionString = "0.7.2" // x-release-please-version
+        val versionString = "0.8.0" // x-release-please-version
         versionName = versionString
 
         // Auto-calculate versionCode from versionName (e.g., 1.2.3 -> 10203)

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/chaotic-ground/subee/compare/v0.7.2...v0.8.0) (2026-06-13)
+
+
+### Features
+
+* divider-aware refresh / jump affordances ([6a40e10](https://github.com/chaotic-ground/subee/commit/6a40e1017a42e3ec9609710d39d958f6917faaac))
+* keep the floating Refresh button visible at the top too ([2603851](https://github.com/chaotic-ground/subee/commit/2603851df8147c533e91d13e11c92e37e44ec30e))
+
 ## [0.7.2](https://github.com/lens0021/subee/compare/v0.7.1...v0.7.2) (2026-06-13)
 
 
