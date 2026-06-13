@@ -172,11 +172,14 @@ export default function App() {
 	}, []);
 
 	// Save scroll positions so they can be restored after a reload or after
-	// returning to a backgrounded app.
+	// returning to a backgrounded app. Gated on feedReady so it re-runs once the
+	// scroll containers actually exist — on first mount the app shows a loading
+	// screen and the refs are still null.
+	const feedReady = status === "authenticated" && !subsLoading && !!auth;
 	useEffect(() => {
 		const publicEl = publicScrollRef.current;
 		const subscribedEl = subscribedScrollRef.current;
-		if (!publicEl || !subscribedEl) return;
+		if (!feedReady || !publicEl || !subscribedEl) return;
 		const savePublic = debounce(
 			() => saveAnchor("public", captureAnchor(publicEl)),
 			300,
@@ -204,7 +207,7 @@ export default function App() {
 			savePublic.cancel();
 			saveSubscribed.cancel();
 		};
-	}, []);
+	}, [feedReady]);
 
 	const switchTab = (tab: Tab) => {
 		window.history.pushState({ tab }, "");
