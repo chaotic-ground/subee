@@ -20,6 +20,8 @@ object FeedSyncScheduler {
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
+                        // Don't spend battery prefetching when it's already low.
+                        .setRequiresBatteryNotLow(true)
                         .build(),
                 )
                 .build()
