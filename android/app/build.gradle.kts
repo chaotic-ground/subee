@@ -12,8 +12,8 @@ android {
         minSdk = 26
         targetSdk = 34
 
-        // Keep in sync with the web app version in package.json
-        val versionString = "0.1.0"
+        // Kept in sync with package.json by release-please
+        val versionString = "0.1.0" // x-release-please-version
         versionName = versionString
 
         // Auto-calculate versionCode from versionName (e.g., 1.2.3 -> 10203)
@@ -34,11 +34,29 @@ android {
         buildConfig = true
     }
 
+    // CI release builds use a fixed keystore (GitHub secrets) so Obtainium
+    // updates install over previous versions; local builds fall back to debug.
+    val releaseKeystore = System.getenv("SUBEE_KEYSTORE_FILE")
+    if (releaseKeystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("SUBEE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SUBEE_KEY_ALIAS")
+                keyPassword = System.getenv("SUBEE_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Use debug signing config for development/testing releases
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                if (releaseKeystore != null) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 
