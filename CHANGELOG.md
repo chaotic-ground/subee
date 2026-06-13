@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/lens0021/subee/compare/v0.4.0...v0.5.0) (2026-06-13)
+
+
+### Features
+
+* restore scroll position after returning to a backgrounded app ([218f422](https://github.com/lens0021/subee/commit/218f4227c8c8169cae1097ce805749be6f1477a2))
+
+
+### Performance Improvements
+
+* **android:** reuse the HTTP connection across sequential polls ([f2a8d33](https://github.com/lens0021/subee/commit/f2a8d33501a76859def685013e9a8a1180af757f))
+* **android:** skip background polling when battery is low ([93971a0](https://github.com/lens0021/subee/commit/93971a0af75233bc3962367c8d362c4792789342))
+* **android:** skip redundant native sync-state writes ([d54fdc4](https://github.com/lens0021/subee/commit/d54fdc4d346d17a64c79d31f12ee5a2951977673))
+* **android:** stop enabling the unused WebSQL database ([2b4a224](https://github.com/lens0021/subee/commit/2b4a224873a9c41e1929aab740c45a98ae1cbf47))
+
 ## [0.4.0](https://github.com/lens0021/subee/compare/v0.3.0...v0.4.0) (2026-06-13)
 
 
