@@ -16,7 +16,9 @@ import { concurrent } from "../sync/concurrent";
 import { pollFeed } from "../sync/pollFeed";
 
 const PAGE_SIZE = 20;
-const CONCURRENCY = 10;
+// Keep foreground resolve/fetch gentle on the home instance (all requests go
+// there); matches the polling concurrency.
+const CONCURRENCY = 3;
 const FLUSH_EVERY = 20; // update UI after every N accounts complete
 const MAX_CACHED_POSTS = 200;
 
