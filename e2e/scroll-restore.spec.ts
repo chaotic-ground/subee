@@ -107,6 +107,16 @@ test("restores scroll to the same post after a reload", async ({ page }) => {
 	expect(await topPostId(page, CONTAINER)).toBe(before);
 });
 
+test("shows the Refresh button even at the top of the feed", async ({
+	page,
+}) => {
+	await authAndSubscribe(page);
+	// At the top (no scrolling), the floating Refresh prompt is still visible.
+	const container = page.locator(CONTAINER);
+	expect(await container.evaluate((el) => el.scrollTop)).toBe(0);
+	await expect(page.getByRole("button", { name: /Refresh/ })).toBeVisible();
+});
+
 test("starts at the top when nothing was scrolled", async ({ page }) => {
 	await authAndSubscribe(page);
 	await page.reload();

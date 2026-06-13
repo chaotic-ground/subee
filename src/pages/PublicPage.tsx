@@ -47,10 +47,7 @@ export function PublicPage({
 
 	return (
 		<>
-			<FloatingRefreshButton
-				onRefresh={refresh}
-				scrollContainerRef={scrollContainerRef}
-			/>
+			<FloatingRefreshButton onRefresh={refresh} />
 			<PostList
 				posts={posts}
 				excludeSubscribed={excludeSubscribed}

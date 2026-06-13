@@ -96,7 +96,6 @@ export function SubscribedPage({
 			<FloatingRefreshButton
 				onPoll={triggerPoll}
 				onRefresh={flushBuffer}
-				scrollContainerRef={scrollContainerRef}
 				stagedCount={stagedCount}
 				pollProgress={pollProgress}
 				lastPollTime={lastPollTime}

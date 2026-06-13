@@ -1,6 +1,5 @@
 import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { RefObject } from "react";
 import { useEffect, useState } from "react";
 import type { PollProgress } from "../hooks/useSubscribedFeed";
 
@@ -14,7 +13,6 @@ function relativeTime(ts: number): string {
 interface FloatingRefreshButtonProps {
 	onPoll?: () => void;
 	onRefresh: () => void;
-	scrollContainerRef: RefObject<HTMLElement | null>;
 	stagedCount?: number;
 	pollProgress?: PollProgress | null;
 	lastPollTime?: number | null;
@@ -23,21 +21,11 @@ interface FloatingRefreshButtonProps {
 export function FloatingRefreshButton({
 	onRefresh,
 	onPoll = onRefresh,
-	scrollContainerRef,
 	stagedCount = 0,
 	pollProgress = null,
 	lastPollTime = null,
 }: FloatingRefreshButtonProps) {
-	const [scrolled, setScrolled] = useState(false);
 	const [, tick] = useState(0);
-
-	useEffect(() => {
-		const el = scrollContainerRef.current;
-		if (!el) return;
-		const handleScroll = () => setScrolled(el.scrollTop > 200);
-		el.addEventListener("scroll", handleScroll, { passive: true });
-		return () => el.removeEventListener("scroll", handleScroll);
-	}, [scrollContainerRef]);
 
 	// Re-render every 30s to keep relative time fresh
 	useEffect(() => {
@@ -45,8 +33,6 @@ export function FloatingRefreshButton({
 		const id = setInterval(() => tick((n) => n + 1), 30_000);
 		return () => clearInterval(id);
 	}, [lastPollTime]);
-
-	if (!scrolled && !pollProgress && stagedCount === 0) return null;
 
 	if (pollProgress) {
 		return (
