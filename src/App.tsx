@@ -31,12 +31,15 @@ const SCROLL_KEYS: Record<Tab, string> = {
 	subscribed: "subee:scroll:subscribed",
 };
 
+// Persisted in localStorage (not sessionStorage) so the position survives the
+// WebView/process being recreated after the app sits in the background — i.e.
+// you return to your spot even after switching away for a long time.
 function readScroll(tab: Tab): number {
-	return Number(sessionStorage.getItem(SCROLL_KEYS[tab]) ?? 0);
+	return Number(localStorage.getItem(SCROLL_KEYS[tab]) ?? 0);
 }
 
 function saveScroll(tab: Tab, y: number) {
-	sessionStorage.setItem(SCROLL_KEYS[tab], String(y));
+	localStorage.setItem(SCROLL_KEYS[tab], String(y));
 }
 
 export default function App() {
@@ -138,7 +141,8 @@ export default function App() {
 		return () => window.removeEventListener("popstate", onPopState);
 	}, []);
 
-	// Save scroll positions for page-reload restore
+	// Save scroll positions so they can be restored after a reload or after
+	// returning to a backgrounded app.
 	useEffect(() => {
 		const publicEl = publicScrollRef.current;
 		const subscribedEl = subscribedScrollRef.current;
@@ -151,11 +155,22 @@ export default function App() {
 			() => saveScroll("subscribed", subscribedEl.scrollTop),
 			300,
 		);
+		// Capture the latest position the moment the app is backgrounded, before
+		// Android can dispose the WebView (debounced saves may not have fired).
+		const saveOnHide = () => {
+			if (document.visibilityState !== "hidden") return;
+			savePublic.cancel();
+			saveSubscribed.cancel();
+			saveScroll("public", publicEl.scrollTop);
+			saveScroll("subscribed", subscribedEl.scrollTop);
+		};
 		publicEl.addEventListener("scroll", savePublic, { passive: true });
 		subscribedEl.addEventListener("scroll", saveSubscribed, { passive: true });
+		document.addEventListener("visibilitychange", saveOnHide);
 		return () => {
 			publicEl.removeEventListener("scroll", savePublic);
 			subscribedEl.removeEventListener("scroll", saveSubscribed);
+			document.removeEventListener("visibilitychange", saveOnHide);
 			savePublic.cancel();
 			saveSubscribed.cancel();
 		};
