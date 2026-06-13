@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/lens0021/subee/compare/v0.2.3...v0.3.0) (2026-06-13)
+
+
+### Features
+
+* quieter background sync — 4h interval, in-place silent notification ([7cc99e7](https://github.com/lens0021/subee/commit/7cc99e7e716f20f7cf791b3ea4e1b2bd5e616e33))
+
 ## [0.2.3](https://github.com/lens0021/subee/compare/v0.2.2...v0.2.3) (2026-06-13)
 
 
