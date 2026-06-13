@@ -26,8 +26,9 @@ class MainActivity : Activity() {
 
         webView.settings.apply {
             javaScriptEnabled = true
+            // domStorageEnabled covers localStorage and IndexedDB, which the app
+            // uses; the deprecated WebSQL (databaseEnabled) is not needed.
             domStorageEnabled = true
-            databaseEnabled = true
         }
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         webView.addJavascriptInterface(SubeeBridge(this), "SubeeAndroid")
