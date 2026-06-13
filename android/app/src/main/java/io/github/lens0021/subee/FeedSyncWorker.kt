@@ -104,18 +104,21 @@ class FeedSyncWorker(
         conn.connectTimeout = TIMEOUT_MS
         conn.readTimeout = TIMEOUT_MS
         conn.setRequestProperty("Authorization", "Bearer $accessToken")
-        try {
-            val code = conn.responseCode
-            if (code == HTTP_TOO_MANY_REQUESTS) {
-                throw RateLimitException(retryAfterMs(conn))
-            }
-            if (code != HttpURLConnection.HTTP_OK) {
-                throw IllegalStateException("HTTP $code")
-            }
-            return JSONArray(conn.inputStream.bufferedReader().readText())
-        } finally {
-            conn.disconnect()
+        // Consume the body fully and close streams without disconnect(), so the
+        // TLS connection returns to the pool and the next sequential request to
+        // the same home instance reuses it — fewer handshakes for the phone and
+        // fewer new connections for the instance. disconnect() would evict it.
+        val code = conn.responseCode
+        if (code == HTTP_TOO_MANY_REQUESTS) {
+            val backoff = retryAfterMs(conn)
+            conn.errorStream?.use { it.readBytes() }
+            throw RateLimitException(backoff)
         }
+        if (code != HttpURLConnection.HTTP_OK) {
+            conn.errorStream?.use { it.readBytes() }
+            throw IllegalStateException("HTTP $code")
+        }
+        return conn.inputStream.bufferedReader().use { JSONArray(it.readText()) }
     }
 
     /**
