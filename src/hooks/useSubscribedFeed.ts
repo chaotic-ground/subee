@@ -287,6 +287,16 @@ export function useSubscribedFeed(
 		}
 	}, [handles, instanceUrl, accessToken, initCursors, flush, poll]);
 
+	// Load accounts that have never been fetched (e.g. importing subscriptions
+	// into an empty feed). Only runs while uninitialized, so subscribing a
+	// single account to an already-loaded feed stays lazy and is picked up on
+	// the next mount, preserving the don't-fetch-on-subscribe behavior.
+	useEffect(() => {
+		if (handles.size === 0) return;
+		if (initializedRef.current || loadingRef.current) return;
+		fetchMore();
+	}, [handles, fetchMore]);
+
 	const flushBuffer = useCallback(() => {
 		if (bufferRef.current.length === 0) return;
 

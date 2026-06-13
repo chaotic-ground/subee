@@ -55,10 +55,8 @@ export function SubscribedPage({
 	// Hide once all are done (includes after cache restore).
 	const showGrid = [...accountStatuses.values()].some((s) => s !== "done");
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
-	useEffect(() => {
-		if (handles.size > 0) fetchMore();
-	}, []);
+	// Initial load is driven by useSubscribedFeed (auto-loads uninitialized
+	// accounts, including after importing subscriptions).
 
 	// Restore scroll once after the first batch of posts loads
 	const restoredRef = useRef(false);
