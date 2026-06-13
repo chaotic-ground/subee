@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/lens0021/subee/compare/v0.5.0...v0.6.0) (2026-06-13)
+
+
+### Features
+
+* accept profile URLs when subscribing and repair bad saved handles ([6febc97](https://github.com/lens0021/subee/commit/6febc97b8c9f3ce8855293cad2e6d74069c64149))
+
 ## [0.5.0](https://github.com/lens0021/subee/compare/v0.4.0...v0.5.0) (2026-06-13)
 
 
