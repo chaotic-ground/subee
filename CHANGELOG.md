@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/lens0021/subee/compare/v0.2.0...v0.2.1) (2026-06-13)
+
+
+### Bug Fixes
+
+* route service worker requests through WebViewAssetLoader ([336c97e](https://github.com/lens0021/subee/commit/336c97efc6579a1c3e63729e760bfec9683f3c2c))
+
 ## [0.2.0](https://github.com/lens0021/subee/compare/v0.1.0...v0.2.0) (2026-06-13)
 
 
