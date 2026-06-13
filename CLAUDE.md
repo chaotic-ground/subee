@@ -44,7 +44,7 @@
 - **Import subscriptions** — 텍스트로 구독 목록을 일괄 교체.
 - **Subscribe to account** — 단일 handle을 구독 목록에 추가.
 - **Exclude subscribed** — 체크 시 Subscribed 탭의 게시물에서 이미 구독한 계정 게시물을 Home 탭에서 숨김.
-- **Background sync** — 체크 시 브라우저가 백그라운드(앱 닫혀 있을 때 포함)에서 주기적으로 새 게시물을 폴링. minInterval 12시간이지만 실제 간격은 브라우저가 결정. 지원하지 않는 브라우저(Firefox/Safari)에서는 항목 숨김. 권한이 거부되면 자동으로 off로 되돌아감.
+- **Background sync** — 체크 시 백그라운드(앱 닫혀 있을 때 포함)에서 주기적으로 새 게시물을 폴링. 브라우저에서는 Periodic Background Sync 사용(minInterval 12시간, 실제 간격은 브라우저가 결정, Firefox/Safari에서는 항목 숨김, 권한 거부 시 자동 off). Android APK에서는 네이티브 WorkManager가 1시간 주기로 폴링하고 새 글 도착 시 시스템 알림 표시.
 - **Log out** — 탭 시 "Log out? / Yes / Cancel" 확인 후 로그아웃.
 
 ### 게시물 카드
@@ -52,3 +52,10 @@
 - 계정 이름, 아바타, 게시 시간, 본문, 미디어, boost/favourite 수 표시.
 - **+ Subscribe / Subscribed** 버튼으로 해당 계정 구독 토글.
 - CW(content warning) 있는 게시물은 접힌 상태로 표시, "Show content"로 펼침.
+
+## Android APK
+
+- `android/` — WebView 래퍼 앱. `npm run build:android`가 웹 빌드를 `android/app/src/main/assets/www`로 출력하고, `WebViewAssetLoader`가 `https://appassets.androidplatform.net/`으로 서빙.
+- 브리지: 웹 `src/native/android.ts` ↔ 네이티브 `SubeeBridge.kt` (`window.SubeeAndroid`). 웹이 auth와 계정별 커서를 push(`updateSyncState`)하면 네이티브 `FeedSyncWorker`(WorkManager, 1시간 주기)가 폴링해 알림을 띄우고, 앱 시작 시 웹이 `consumeSyncResults`로 새 글과 커서 갱신을 가져와 캐시에 병합.
+- OAuth는 WebView 안에서 진행됨. redirect_uri가 appassets origin이라 외부 브라우저로 빼면 돌아올 수 없음.
+- 빌드 순서: `npm run build:android` → `cd android && ./gradlew assembleDebug`. CI는 `.github/workflows/android.yaml`이 `subee-debug` artifact 업로드.

@@ -1,10 +1,17 @@
 import { debounce } from "lodash";
 import { useEffect, useRef, useState } from "react";
-import { AppHeader } from "./components/AppHeader";
 import { AddAccountOverlay } from "./components/AddAccountOverlay";
+import { AppHeader } from "./components/AppHeader";
 import { ImportOverlay } from "./components/ImportOverlay";
 import { useAuth } from "./hooks/useAuth";
 import { useSubscriptions } from "./hooks/useSubscriptions";
+import {
+	clearNativeSyncState,
+	getNativeBackgroundSync,
+	isAndroidApp,
+	pushNativeSyncState,
+	setNativeBackgroundSync,
+} from "./native/android";
 import { LoginPage } from "./pages/LoginPage";
 import { PublicPage } from "./pages/PublicPage";
 import { SubscribedPage } from "./pages/SubscribedPage";
@@ -41,11 +48,17 @@ export default function App() {
 	const [excludeSubscribed, setExcludeSubscribed] = useState(
 		() => localStorage.getItem("subee:excludeSubscribed") === "true",
 	);
-	const bgSyncSupported = isPeriodicSyncSupported();
+	const androidApp = isAndroidApp();
+	const bgSyncSupported = androidApp || isPeriodicSyncSupported();
 	const [bgSyncEnabled, setBgSyncEnabled] = useState(false);
 
 	useEffect(() => {
 		if (!bgSyncSupported) return;
+		if (androidApp) {
+			// Native WorkManager scheduling is the source of truth on Android
+			setBgSyncEnabled(getNativeBackgroundSync());
+			return;
+		}
 		let cancelled = false;
 		(async () => {
 			const enabled = await loadBgSyncEnabled();
@@ -56,9 +69,19 @@ export default function App() {
 		return () => {
 			cancelled = true;
 		};
-	}, [bgSyncSupported]);
+	}, [bgSyncSupported, androidApp]);
+
+	// Keep the native poller's auth in sync with the web session
+	useEffect(() => {
+		if (auth) void pushNativeSyncState(auth.instanceUrl, auth.accessToken);
+	}, [auth]);
 
 	const handleToggleBgSync = async (v: boolean) => {
+		if (androidApp) {
+			setNativeBackgroundSync(v);
+			setBgSyncEnabled(v);
+			return;
+		}
 		setBgSyncEnabled(v);
 		await saveBgSyncEnabled(v);
 		if (v) {
@@ -153,6 +176,11 @@ export default function App() {
 		}
 	};
 
+	const handleLogout = () => {
+		clearNativeSyncState();
+		logout();
+	};
+
 	const handleImportConfirm = async (text: string) => {
 		const newHandles = importHandles(text);
 		await replaceAll(newHandles);
@@ -193,7 +221,7 @@ export default function App() {
 				onSwitch={switchTab}
 				handles={handles}
 				instanceHostname={instanceHostname}
-				onLogout={logout}
+				onLogout={handleLogout}
 				onImportClick={() => setShowImport(true)}
 				onAddAccountClick={() => setShowAddAccount(true)}
 				excludeSubscribed={excludeSubscribed}

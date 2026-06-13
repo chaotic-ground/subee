@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bee from public/favicon.svg, scaled into the adaptive-icon safe zone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+	android:width="108dp"
+	android:height="108dp"
+	android:viewportWidth="512"
+	android:viewportHeight="512">
+	<group
+		android:pivotX="256"
+		android:pivotY="256"
+		android:scaleX="0.55"
+		android:scaleY="0.55">
+		<!-- Wings -->
+		<group
+			android:pivotX="185"
+			android:pivotY="208"
+			android:rotation="-20">
+			<path
+				android:fillAlpha="0.8"
+				android:fillColor="#FFFFFF"
+				android:pathData="M110,208a75,44 0 1,0 150,0a75,44 0 1,0 -150,0" />
+		</group>
+		<group
+			android:pivotX="327"
+			android:pivotY="208"
+			android:rotation="20">
+			<path
+				android:fillAlpha="0.8"
+				android:fillColor="#FFFFFF"
+				android:pathData="M252,208a75,44 0 1,0 150,0a75,44 0 1,0 -150,0" />
+		</group>
+		<!-- Body -->
+		<path
+			android:fillColor="#FBBF24"
+			android:pathData="M176,312a80,108 0 1,0 160,0a80,108 0 1,0 -160,0" />
+		<!-- Stripes -->
+		<path
+			android:fillAlpha="0.7"
+			android:fillColor="#1A1A1A"
+			android:pathData="M180,280h152v28h-152z" />
+		<path
+			android:fillAlpha="0.7"
+			android:fillColor="#1A1A1A"
+			android:pathData="M180,328h152v28h-152z" />
+		<!-- Stinger -->
+		<path
+			android:fillColor="#D97706"
+			android:pathData="M256,422L242,412L270,412Z" />
+		<!-- Head -->
+		<path
+			android:fillColor="#FBBF24"
+			android:pathData="M200,196a56,56 0 1,0 112,0a56,56 0 1,0 -112,0" />
+		<!-- Antennae -->
+		<path
+			android:pathData="M232,142 Q212,96 196,72"
+			android:strokeColor="#FBBF24"
+			android:strokeLineCap="round"
+			android:strokeWidth="9" />
+		<path
+			android:fillColor="#FBBF24"
+			android:pathData="M179,65a12,12 0 1,0 24,0a12,12 0 1,0 -24,0" />
+		<path
+			android:pathData="M280,142 Q300,96 316,72"
+			android:strokeColor="#FBBF24"
+			android:strokeLineCap="round"
+			android:strokeWidth="9" />
+		<path
+			android:fillColor="#FBBF24"
+			android:pathData="M309,65a12,12 0 1,0 24,0a12,12 0 1,0 -24,0" />
+		<!-- Eyes -->
+		<path
+			android:fillColor="#1A1A1A"
+			android:pathData="M224,192a12,12 0 1,0 24,0a12,12 0 1,0 -24,0" />
+		<path
+			android:fillColor="#1A1A1A"
+			android:pathData="M264,192a12,12 0 1,0 24,0a12,12 0 1,0 -24,0" />
+		<!-- Smile -->
+		<path
+			android:pathData="M236,222 Q256,242 276,222"
+			android:strokeColor="#1A1A1A"
+			android:strokeLineCap="round"
+			android:strokeWidth="7" />
+	</group>
+</vector>

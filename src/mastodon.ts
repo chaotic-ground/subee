@@ -7,7 +7,7 @@ function instanceBase(url: string): string {
 	return url.replace(/\/$/, "");
 }
 
-function camelize(obj: unknown): unknown {
+export function camelize(obj: unknown): unknown {
 	if (Array.isArray(obj)) return obj.map(camelize);
 	if (obj !== null && typeof obj === "object") {
 		return Object.fromEntries(

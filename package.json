@@ -19,6 +19,7 @@
 	},
 	"scripts": {
 		"build": "tsc && vite build",
+		"build:android": "tsc && vite build --mode android --outDir android/app/src/main/assets/www --emptyOutDir",
 		"dev": "vite",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",

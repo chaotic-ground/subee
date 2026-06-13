@@ -3,6 +3,10 @@ import type { mastodon } from "masto";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAccountStatuses, lookupAccount, parseHandle } from "../mastodon";
 import {
+	consumeNativeSyncResults,
+	pushNativeSyncState,
+} from "../native/android";
+import {
 	type AccountCursor,
 	loadCursorCache,
 	saveCursorCache,
@@ -46,6 +50,9 @@ export function useSubscribedFeed(
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
+			// Pull in posts fetched by native background polling before reading
+			// the cache, so they appear immediately on app launch.
+			await consumeNativeSyncResults(instanceUrl);
 			const cached = await loadPostCache(instanceUrl);
 			if (cancelled || !cached || cached.length === 0) return;
 			// Only adopt cache if no posts have arrived yet (network may have
@@ -162,6 +169,7 @@ export function useSubscribedFeed(
 			// see the updated sinceId/lastPolledAt persisted by pollFeed.
 			const refreshed = await loadCursorCache(instanceUrl);
 			if (refreshed) cursorsRef.current = new Map(refreshed);
+			void pushNativeSyncState(instanceUrl, accessToken);
 			if (newPosts.length > 0) {
 				bufferRef.current.push(...newPosts);
 				setStagedCount(bufferRef.current.length);
@@ -272,6 +280,7 @@ export function useSubscribedFeed(
 			setError(String(e));
 		} finally {
 			await saveCursorCache(instanceUrl, [...cursorsRef.current.entries()]);
+			void pushNativeSyncState(instanceUrl, accessToken);
 			loadingRef.current = false;
 			setLoading(false);
 			setProgress(null);

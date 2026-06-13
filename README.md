@@ -57,6 +57,20 @@ npm run test:e2e    # end-to-end tests (Playwright)
 npm run lint        # Biome lint + format check
 ```
 
+## Android app
+
+`android/` contains a native wrapper that bundles the web build into a WebView app. Unlike the PWA, background polling uses Android's WorkManager: a native worker (`FeedSyncWorker`) polls subscribed accounts roughly every hour while the app is closed, shows a notification when new posts arrive, and the web app imports the results into its caches on next launch via the `window.SubeeAndroid` bridge.
+
+Build locally (requires JDK 17 and the Android SDK):
+
+```sh
+npm run build:android        # web assets → android/app/src/main/assets/www
+cd android
+./gradlew assembleDebug      # → app/build/outputs/apk/debug/subee-debug-<version>.apk
+```
+
+CI builds and uploads the APK as the `subee-debug` artifact on every push to main (`Android APK` workflow).
+
 ## Tech stack
 
 - React 18 + TypeScript + Vite

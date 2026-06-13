@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">subee</string>
+	<string name="notification_channel_name">New posts</string>
+	<plurals name="new_posts">
+		<item quantity="one">%d new post</item>
+		<item quantity="other">%d new posts</item>
+	</plurals>
+</resources>
