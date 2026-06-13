@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/lens0021/subee/compare/v0.2.1...v0.2.2) (2026-06-13)
+
+
+### Bug Fixes
+
+* auto-load subscribed feed after importing into an empty feed ([518d63d](https://github.com/lens0021/subee/commit/518d63d38e06d9f01d5e5478bafea03999da6f2c))
+
 ## [0.2.1](https://github.com/lens0021/subee/compare/v0.2.0...v0.2.1) (2026-06-13)
 
 
