@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/lens0021/subee/compare/v0.3.0...v0.4.0) (2026-06-13)
+
+
+### Features
+
+* **android:** back off on HTTP 429 from the home instance ([0d0658b](https://github.com/lens0021/subee/commit/0d0658b047d39d15257dc3f6b6ef85891f151b49))
+
+
+### Performance Improvements
+
+* **android:** poll accounts concurrently in background worker ([9dd85b5](https://github.com/lens0021/subee/commit/9dd85b5d18c9cec2af0b81d114d2f7e1911991c2))
+* **android:** return pending count from recordPollResults ([4664f3e](https://github.com/lens0021/subee/commit/4664f3e4f19ee680432e2e8923872e676e91cb02))
+* **android:** revert background polling to sequential ([0a5def1](https://github.com/lens0021/subee/commit/0a5def1b910d270cd1d82923976254298f4f2923))
+
 ## [0.3.0](https://github.com/lens0021/subee/compare/v0.2.3...v0.3.0) (2026-06-13)
 
 
