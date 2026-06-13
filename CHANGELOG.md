@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/lens0021/subee/compare/v0.7.0...v0.7.1) (2026-06-13)
+
+
+### Bug Fixes
+
+* **android:** open post links in the system browser, not the app WebView ([6a3d29e](https://github.com/lens0021/subee/commit/6a3d29e8de14dad3d143b52f619e3398a4092da1))
+* restore scroll by post anchor instead of pixel offset ([2caf033](https://github.com/lens0021/subee/commit/2caf0337d8ede19fa3073a73c59858e6a8399e22))
+
 ## [0.7.0](https://github.com/lens0021/subee/compare/v0.6.0...v0.7.0) (2026-06-13)
 
 
