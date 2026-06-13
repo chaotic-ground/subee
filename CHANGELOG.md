@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/lens0021/subee/compare/v0.6.0...v0.7.0) (2026-06-13)
+
+
+### Features
+
+* show the account-status grid during polling, only at the top ([ca413c9](https://github.com/lens0021/subee/commit/ca413c91b7a89ab159b0b8200023996499b06922))
+* stage initial feed build into the buffer instead of inserting live ([4753781](https://github.com/lens0021/subee/commit/47537812026e2119b7ce66495af8a45675dd33fa))
+
+
+### Performance Improvements
+
+* lower foreground feed concurrency from 10 to 3 ([e8901e5](https://github.com/lens0021/subee/commit/e8901e580d44839bed9309b00b6a519036373cb5))
+
 ## [0.6.0](https://github.com/lens0021/subee/compare/v0.5.0...v0.6.0) (2026-06-13)
 
 
