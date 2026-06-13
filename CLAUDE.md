@@ -44,7 +44,7 @@
 - **Import subscriptions** — 텍스트로 구독 목록을 일괄 교체.
 - **Subscribe to account** — 단일 handle을 구독 목록에 추가.
 - **Exclude subscribed** — 체크 시 Subscribed 탭의 게시물에서 이미 구독한 계정 게시물을 Home 탭에서 숨김.
-- **Background sync** — 체크 시 백그라운드(앱 닫혀 있을 때 포함)에서 주기적으로 새 게시물을 폴링. 브라우저에서는 Periodic Background Sync 사용(minInterval 12시간, 실제 간격은 브라우저가 결정, Firefox/Safari에서는 항목 숨김, 권한 거부 시 자동 off). Android APK에서는 네이티브 WorkManager가 약 4시간 주기(실제 간격은 Doze/배터리 상태에 따라 더 길어질 수 있음)로 폴링하고, 새 글 도착 시 단일 알림을 누적 대기 글 수로 in-place 갱신(IMPORTANCE_LOW·setOnlyAlertOnce로 무음·재알림 없음, 앱을 열면 해제).
+- **Background sync** — 체크 시 백그라운드(앱 닫혀 있을 때 포함)에서 주기적으로 새 게시물을 폴링. 브라우저에서는 Periodic Background Sync 사용(minInterval 12시간, 실제 간격은 브라우저가 결정, Firefox/Safari에서는 항목 숨김, 권한 거부 시 자동 off). Android APK에서는 네이티브 WorkManager가 약 4시간 주기(실제 간격은 Doze/배터리 상태에 따라 더 길어질 수 있음)로 계정을 **순차** 폴링(홈 인스턴스 부담·폰 피크 리소스 최소화)하고, 새 글 도착 시 단일 알림을 누적 대기 글 수로 in-place 갱신(IMPORTANCE_LOW·setOnlyAlertOnce로 무음·재알림 없음, 앱을 열면 해제). HTTP 429를 받으면 이번 회차 폴링을 즉시 중단하고 `Retry-After`(없으면 `X-RateLimit-Reset`, 그래도 없으면 5분, 최대 1시간)만큼 다음 회차를 건너뜀.
 - **Log out** — 탭 시 "Log out? / Yes / Cancel" 확인 후 로그아웃.
 
 ### 게시물 카드

@@ -9,6 +9,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
+
+/** Thrown when the instance returns HTTP 429; carries how long to back off. */
+private class RateLimitException(val retryAfterMs: Long) : Exception()
 
 /**
  * Polls subscribed accounts for new posts while the app is closed,
@@ -28,6 +32,13 @@ class FeedSyncWorker(
             val accessToken = state.optString("accessToken")
             val cursors = state.optJSONArray("cursors") ?: JSONArray()
             if (accessToken.isEmpty() || cursors.length() == 0) {
+                return@withContext Result.success()
+            }
+
+            // Respect a prior rate-limit backoff: if the home instance asked us
+            // to wait, skip this run entirely until then (no polling, no wakelock
+            // spent sleeping).
+            if (System.currentTimeMillis() < store.rateLimitedUntil) {
                 return@withContext Result.success()
             }
 
@@ -60,6 +71,12 @@ class FeedSyncWorker(
                         fetched.add(posts.getJSONObject(j))
                     }
                     updates[handle] = update
+                } catch (e: RateLimitException) {
+                    // The home instance is rate-limiting us. Every account hits
+                    // the same instance, so stop polling the rest this run and
+                    // hold off until it says we may try again.
+                    store.rateLimitedUntil = System.currentTimeMillis() + e.retryAfterMs
+                    break
                 } catch (_: Exception) {
                     // skip this account until the next run
                 }
@@ -88,8 +105,12 @@ class FeedSyncWorker(
         conn.readTimeout = TIMEOUT_MS
         conn.setRequestProperty("Authorization", "Bearer $accessToken")
         try {
-            if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IllegalStateException("HTTP ${conn.responseCode}")
+            val code = conn.responseCode
+            if (code == HTTP_TOO_MANY_REQUESTS) {
+                throw RateLimitException(retryAfterMs(conn))
+            }
+            if (code != HttpURLConnection.HTTP_OK) {
+                throw IllegalStateException("HTTP $code")
             }
             return JSONArray(conn.inputStream.bufferedReader().readText())
         } finally {
@@ -97,8 +118,30 @@ class FeedSyncWorker(
         }
     }
 
+    /**
+     * How long to back off after a 429, from `Retry-After` (delta seconds) or
+     * Mastodon's `X-RateLimit-Reset` (ISO-8601), capped to a sane maximum.
+     */
+    private fun retryAfterMs(conn: HttpURLConnection): Long {
+        conn.getHeaderField("Retry-After")?.trim()?.toLongOrNull()?.let { seconds ->
+            return (seconds * 1000).coerceIn(0L, MAX_RATE_LIMIT_BACKOFF_MS)
+        }
+        conn.getHeaderField("X-RateLimit-Reset")?.let { reset ->
+            try {
+                val delta = Instant.parse(reset).toEpochMilli() - System.currentTimeMillis()
+                if (delta > 0) return delta.coerceAtMost(MAX_RATE_LIMIT_BACKOFF_MS)
+            } catch (_: Exception) {
+                // unparseable — fall through to default
+            }
+        }
+        return DEFAULT_RATE_LIMIT_BACKOFF_MS
+    }
+
     companion object {
         private const val PAGE_SIZE = 20
         private const val TIMEOUT_MS = 15_000
+        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private const val DEFAULT_RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000L
+        private const val MAX_RATE_LIMIT_BACKOFF_MS = 60 * 60 * 1000L
     }
 }

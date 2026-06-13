@@ -23,6 +23,13 @@ class SyncStore(context: Context) {
             prefs.edit().putBoolean(KEY_ENABLED, value).apply()
         }
 
+    /** Epoch millis before which the worker must not poll (instance backoff). */
+    var rateLimitedUntil: Long
+        get() = prefs.getLong(KEY_RATE_LIMITED_UNTIL, 0L)
+        set(value) {
+            prefs.edit().putLong(KEY_RATE_LIMITED_UNTIL, value).apply()
+        }
+
     fun saveState(json: String) {
         synchronized(LOCK) {
             JSONObject(json) // validate before storing
@@ -113,6 +120,7 @@ class SyncStore(context: Context) {
         private const val KEY_PENDING_POSTS = "pendingPosts"
         private const val KEY_PENDING_CURSORS = "pendingCursors"
         private const val KEY_ENABLED = "backgroundSyncEnabled"
+        private const val KEY_RATE_LIMITED_UNTIL = "rateLimitedUntil"
         private const val MAX_PENDING_POSTS = 200
     }
 }
