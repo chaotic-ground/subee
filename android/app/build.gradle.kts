@@ -34,13 +34,30 @@ android {
         buildConfig = true
     }
 
+    // CI release builds sign with a fixed keystore (from GitHub secrets) so
+    // Obtainium can install updates over previous versions; local builds with
+    // no keystore env fall back to the debug key.
+    val releaseKeystore = System.getenv("SUBEE_KEYSTORE_FILE")
+    if (releaseKeystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("SUBEE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SUBEE_KEY_ALIAS")
+                keyPassword = System.getenv("SUBEE_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Use debug signing config for development/testing releases.
-            // Note: updates over an installed version require uninstall first,
-            // since every CI run signs with a freshly generated debug key.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                if (releaseKeystore != null) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 
