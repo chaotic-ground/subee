@@ -36,6 +36,11 @@ export function isAndroidApp(): boolean {
  * Mirror auth + per-account cursors to the native side so the WorkManager
  * worker can poll the Mastodon API while the app is closed.
  */
+// Last payload handed to the native side; lets us skip the cross-process
+// write when nothing the poller cares about changed (e.g. on every
+// infinite-scroll pagination, which advances maxId but not sinceId).
+let lastPushedState: string | null = null;
+
 export async function pushNativeSyncState(
 	instanceUrl: string,
 	accessToken: string,
@@ -55,7 +60,10 @@ export async function pushNativeSyncState(
 				lastPolledAt: c.lastPolledAt ?? 0,
 			})),
 		};
-		b.updateSyncState(JSON.stringify(payload));
+		const json = JSON.stringify(payload);
+		if (json === lastPushedState) return;
+		b.updateSyncState(json);
+		lastPushedState = json;
 	} catch {
 		// native side unavailable — ignore
 	}
@@ -63,6 +71,7 @@ export async function pushNativeSyncState(
 
 export function clearNativeSyncState(): void {
 	try {
+		lastPushedState = null;
 		bridge()?.clearSyncState();
 	} catch {
 		// ignore
