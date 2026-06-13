@@ -4,8 +4,11 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Message
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -29,6 +32,8 @@ class MainActivity : Activity() {
             // domStorageEnabled covers localStorage and IndexedDB, which the app
             // uses; the deprecated WebSQL (databaseEnabled) is not needed.
             domStorageEnabled = true
+            // Needed for onCreateWindow to fire for target="_blank" links.
+            setSupportMultipleWindows(true)
         }
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         webView.addJavascriptInterface(SubeeBridge(this), "SubeeAndroid")
@@ -63,16 +68,43 @@ class MainActivity : Activity() {
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
-                    // http/https stays in the WebView — the Mastodon OAuth flow
-                    // must redirect back to the appassets origin in-place.
+                    // Main-frame http/https stays in the WebView — the app itself
+                    // and the Mastodon OAuth flow (which redirects back to the
+                    // appassets origin) navigate in place. Post links use
+                    // target="_blank" and are handled by onCreateWindow instead.
                     val scheme = request.url.scheme
                     if (scheme == "http" || scheme == "https") return false
-                    return try {
-                        startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                        true
-                    } catch (_: Exception) {
-                        true
-                    }
+                    openExternally(request.url)
+                    return true
+                }
+            }
+
+        webView.webChromeClient =
+            object : WebChromeClient() {
+                override fun onCreateWindow(
+                    view: WebView,
+                    isDialog: Boolean,
+                    isUserGesture: Boolean,
+                    resultMsg: Message,
+                ): Boolean {
+                    // target="_blank" links (post/profile/media links) open in the
+                    // system browser, leaving the app's WebView untouched so
+                    // returning resumes exactly where the user left off.
+                    val popup = WebView(view.context)
+                    popup.webViewClient =
+                        object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                v: WebView,
+                                request: WebResourceRequest,
+                            ): Boolean {
+                                openExternally(request.url)
+                                v.post { v.destroy() }
+                                return true
+                            }
+                        }
+                    (resultMsg.obj as WebView.WebViewTransport).webView = popup
+                    resultMsg.sendToTarget()
+                    return true
                 }
             }
 
@@ -102,6 +134,14 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    private fun openExternally(uri: Uri) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: Exception) {
+            // no app to handle the link — ignore
+        }
     }
 
     fun ensureNotificationPermission() {
