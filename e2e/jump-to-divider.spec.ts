@@ -1,80 +1,19 @@
 import { expect, test } from "@playwright/test";
-
-const INSTANCE = "https://mastodon.social";
-const account = {
-	id: "acc1",
-	acct: "testuser",
-	url: `${INSTANCE}/@testuser`,
-	display_name: "Test User",
-	avatar: "",
-	emojis: [],
-	followers_count: 0,
-};
-
-function makeStatus(id: number, when: number) {
-	return {
-		id: String(id),
-		created_at: new Date(when).toISOString(),
-		content: `<p>Post ${id}</p>`,
-		account,
-		media_attachments: [],
-		emojis: [],
-		reblog: null,
-		favourited: false,
-		reblogged: false,
-		replies_count: 0,
-		reblogs_count: 0,
-		favourites_count: 0,
-		spoiler_text: "",
-		visibility: "public",
-	};
-}
-
-const BASE = Date.UTC(2026, 0, 2);
-const initial = Array.from({ length: 30 }, (_, i) =>
-	makeStatus(2000 - i, BASE - i * 60_000),
-);
-// Enough new posts that, at the top, the divider is pushed below the viewport
-// (so the button becomes a Refresh prompt rather than a jump).
-const fresh = Array.from({ length: 25 }, (_, i) =>
-	makeStatus(2001 + i, BASE + (i + 1) * 60_000),
-);
-
-const CONTAINER = 'div[aria-hidden="false"]';
+import {
+	authAndSubscribe,
+	CONTAINER,
+	freshOnce,
+	makeFresh,
+	mockFeed,
+} from "./helpers";
 
 test("floating button jumps to the New posts divider by scroll position", async ({
 	page,
 }) => {
-	let polledNew = false;
-	await page.route(`${INSTANCE}/**`, (route) =>
-		route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
-	);
-	await page.route(`${INSTANCE}/api/v1/accounts/lookup**`, (route) =>
-		route.fulfill({ json: account }),
-	);
-	await page.route(`${INSTANCE}/api/v1/accounts/acc1/statuses**`, (route) => {
-		const u = new URL(route.request().url());
-		if (u.searchParams.get("since_id")) {
-			if (polledNew) return route.fulfill({ json: [] });
-			polledNew = true;
-			return route.fulfill({ json: fresh });
-		}
-		if (u.searchParams.get("max_id")) return route.fulfill({ json: [] });
-		return route.fulfill({ json: initial });
-	});
-
-	await page.goto("/");
-	await page.evaluate(() => {
-		localStorage.setItem("subee:accessToken", "fake-token");
-		localStorage.setItem("subee:instanceUrl", "https://mastodon.social");
-	});
-	await page.reload();
-	await page.getByRole("button", { name: "Settings" }).click();
-	await page.getByRole("button", { name: /Subscribe to account/i }).click();
-	await page.getByRole("textbox").fill("@testuser@mastodon.social");
-	await page.getByRole("button", { name: "Add" }).click();
-	await expect(page.locator("[data-post-id]").first()).toBeVisible();
-	await page.waitForTimeout(600);
+	// Enough new posts that, at the top, the divider is pushed below the viewport
+	// (so the button becomes a Refresh prompt rather than a jump).
+	await mockFeed(page, { since: freshOnce(makeFresh(25)) });
+	await authAndSubscribe(page);
 
 	// Scope to the active subscribed tab (the Home tab also renders a button).
 	const sub = page.locator(CONTAINER);
@@ -100,8 +39,8 @@ test("floating button jumps to the New posts divider by scroll position", async 
 
 	// Tap jump → the divider becomes visible → the jump button is gone and the
 	// floating Refresh is shown again (there is no inline button anymore).
+	// Give the smooth-scroll + scroll-listener recompute extra room under load.
 	await sub.getByTestId("fab-jump").click();
-	await page.waitForTimeout(800);
+	await expect(sub.getByTestId("fab-refresh")).toBeVisible({ timeout: 10000 });
 	await expect(sub.getByTestId("fab-jump")).toHaveCount(0);
-	await expect(sub.getByTestId("fab-refresh")).toBeVisible();
 });

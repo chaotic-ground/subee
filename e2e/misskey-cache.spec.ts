@@ -45,7 +45,7 @@ test.describe("Misskey reaction caching", () => {
 		});
 
 		await page.evaluate((url) => {
-			// @ts-ignore
+			// @ts-expect-error
 			return window.__fetchMisskeyReactionsForTest?.(url);
 		}, NOTE_URL);
 

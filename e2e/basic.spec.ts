@@ -1,17 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-const FAKE_AUTH = {
-	"subee:accessToken": "fake-token-for-testing",
-	"subee:instanceUrl": "https://mastodon.social",
-};
-
-async function setAuth(page: import("@playwright/test").Page) {
-	await page.goto("/");
-	for (const [key, value] of Object.entries(FAKE_AUTH)) {
-		await page.evaluate(([k, v]) => localStorage.setItem(k, v), [key, value]);
-	}
-	await page.reload();
-}
+import { setAuth } from "./helpers";
 
 test("has title", async ({ page }) => {
 	await page.goto("/");
