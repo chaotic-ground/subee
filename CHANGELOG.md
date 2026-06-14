@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/chaotic-ground/subee/compare/v0.9.0...v0.9.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* don't show initial-load dots during the background auto-poll ([0a8eb72](https://github.com/chaotic-ground/subee/commit/0a8eb72b1dc5f5dcb13459623f1dcc5a04c573ca))
+
 ## [0.9.0](https://github.com/chaotic-ground/subee/compare/v0.8.0...v0.9.0) (2026-06-13)
 
 
