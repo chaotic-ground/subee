@@ -80,8 +80,16 @@ export function SubscribedPage({
 		el.addEventListener("scroll", onScroll, { passive: true });
 		return () => el.removeEventListener("scroll", onScroll);
 	}, [scrollContainerRef, dividerPostId]);
+	// The per-account dots are an initial-load / failure indicator only. A
+	// background poll over an already-loaded feed flips accounts to "loading"
+	// too, but must not show the dots there — it would look like a full reload
+	// (the polling pill already signals a poll). So gate on `loading` (true only
+	// during an initial fetch, not a poll) plus any persistent failures.
+	const statusValues = [...accountStatuses.values()];
 	const showGrid =
-		atTop && [...accountStatuses.values()].some((s) => s !== "done");
+		atTop &&
+		statusValues.length > 0 &&
+		(loading || statusValues.some((s) => s === "failed"));
 
 	// Initial load is driven by useSubscribedFeed (auto-loads uninitialized
 	// accounts, including after importing subscriptions).

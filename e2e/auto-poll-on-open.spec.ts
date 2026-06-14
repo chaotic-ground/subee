@@ -81,4 +81,7 @@ test("auto-polls on reopen and shows the 'N new' pill", async ({ page }) => {
 	const sub = page.locator(CONTAINER);
 	await expect(sub.getByTestId("fab-new")).toBeVisible();
 	await expect(sub.getByTestId("fab-new")).toContainText("5 new");
+	// The background auto-poll must NOT show the initial-load dots — the cached
+	// feed is already present, so it should poll quietly behind the "N new" pill.
+	await expect(sub.getByTestId("account-status-grid")).toHaveCount(0);
 });

@@ -30,7 +30,10 @@ export function AccountStatusGrid({
 	const selectedStatus = selected ? statuses.get(selected) : null;
 
 	return (
-		<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+		<div
+			data-testid="account-status-grid"
+			className="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+		>
 			<div className="flex flex-wrap gap-1 mb-2">
 				{entries.map(([handle, status]) => (
 					<button
