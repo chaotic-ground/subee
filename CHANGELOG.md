@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/chaotic-ground/subee/compare/v0.9.2...v0.10.0) (2026-06-14)
+
+
+### Features
+
+* pull-to-refresh + press feedback; drop inline divider button ([55d1e54](https://github.com/chaotic-ground/subee/commit/55d1e548c13870f847a1a3b6b900722f53160e99))
+
 ## [0.9.2](https://github.com/chaotic-ground/subee/compare/v0.9.1...v0.9.2) (2026-06-14)
 
 
