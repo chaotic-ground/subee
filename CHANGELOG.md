@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/chaotic-ground/subee/compare/v0.9.1...v0.9.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* keep the on-open auto-poll silent (no loading dots, 429 backoff) ([1ca64ff](https://github.com/chaotic-ground/subee/commit/1ca64ff62ae38a76af89a0f9b757f93b60b8ae8b))
+
 ## [0.9.1](https://github.com/chaotic-ground/subee/compare/v0.9.0...v0.9.1) (2026-06-14)
 
 
