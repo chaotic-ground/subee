@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/chaotic-ground/subee/compare/v0.10.1...v0.10.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* don't poll on app open; show what background sync already fetched ([f4ad4fe](https://github.com/chaotic-ground/subee/commit/f4ad4fe19743b2e52589315662023171ef79a1c3))
+
 ## [0.10.1](https://github.com/chaotic-ground/subee/compare/v0.10.0...v0.10.1) (2026-06-14)
 
 
