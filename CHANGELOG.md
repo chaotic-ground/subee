@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/chaotic-ground/subee/compare/v0.10.3...v0.11.0) (2026-06-17)
+
+
+### Features
+
+* let Import merge subscriptions instead of always replacing ([e05eb5d](https://github.com/chaotic-ground/subee/commit/e05eb5dc3d4a57df315f49478e73215d48eace59))
+* mark the read boundary on cold start and clarify the Refresh button ([c6a578a](https://github.com/chaotic-ground/subee/commit/c6a578a68c8c68c56a67057a71a5381e7310b366))
+
 ## [0.10.3](https://github.com/chaotic-ground/subee/compare/v0.10.2...v0.10.3) (2026-06-16)
 
 
