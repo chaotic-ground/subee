@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/chaotic-ground/subee/compare/v0.11.0...v0.12.0) (2026-06-17)
+
+
+### Features
+
+* replace idle "synced ago" label with a back-to-top floating button ([06f6e21](https://github.com/chaotic-ground/subee/commit/06f6e2159c518ed544f1e1c73ed1738b2186823c))
+
 ## [0.11.0](https://github.com/chaotic-ground/subee/compare/v0.10.3...v0.11.0) (2026-06-17)
 
 
