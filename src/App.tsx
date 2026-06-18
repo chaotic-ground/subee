@@ -126,26 +126,11 @@ export default function App() {
 		replaceAll,
 	} = useSubscriptions();
 
-	// Back-button affordance: when scrolled into the feed, the first Back press
-	// returns to the top instead of leaving the app; pressing Back again (already
-	// at the top) lets the browser/app exit. The seeded entry gives the first
-	// press something to intercept.
+	// Don't let the browser auto-restore scroll on reload — the feed restores its
+	// own post anchor (see useRestoreScrollAnchor). The Back gesture is left to
+	// its default so it closes/leaves the app rather than being intercepted.
 	useEffect(() => {
 		history.scrollRestoration = "manual";
-		window.history.replaceState({ app: "root" }, "");
-		window.history.pushState({ app: "feed" }, "");
-
-		const onPopState = () => {
-			const el = subscribedScrollRef.current;
-			if (el && el.scrollTop > 0) {
-				el.scrollTo({ top: 0, behavior: "smooth" });
-				window.history.pushState({ app: "feed" }, "");
-			}
-			// else: at the top — allow the browser to leave the app
-		};
-
-		window.addEventListener("popstate", onPopState);
-		return () => window.removeEventListener("popstate", onPopState);
 	}, []);
 
 	// Save the scroll position so it can be restored after a reload or after
