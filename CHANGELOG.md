@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/chaotic-ground/subee/compare/v0.13.1...v0.13.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* confirm before unsubscribing from a post card ([3466f0d](https://github.com/chaotic-ground/subee/commit/3466f0d6672ccda7fdc8141f3667ba36f6c2ae4b))
+
 ## [0.13.1](https://github.com/chaotic-ground/subee/compare/v0.13.0...v0.13.1) (2026-06-18)
 
 
