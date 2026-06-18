@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/chaotic-ground/subee/compare/v0.12.0...v0.13.0) (2026-06-18)
+
+
+### Features
+
+* remove the Home (public timeline) tab ([226c861](https://github.com/chaotic-ground/subee/commit/226c861ffdcc51dc520706faa5547aa294862a76))
+
 ## [0.12.0](https://github.com/chaotic-ground/subee/compare/v0.11.0...v0.12.0) (2026-06-17)
 
 
