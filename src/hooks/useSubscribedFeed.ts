@@ -424,9 +424,9 @@ export function useSubscribedFeed(
 		setStagedCount(0);
 		flush();
 		if (prevTopId) setDividerPostId(prevTopId);
-		// Tell SubscribedPage to scroll to the newest post — the user asked to see
-		// the new posts. (The mount-seeded boundary divider leaves this untouched,
-		// so a cold-start open never auto-scrolls.)
+		// Tell SubscribedPage to center the seam — the divider between the new posts
+		// (above) and the already-seen ones (below) — same landing as a cold-start
+		// boundary (see boundaryNonce).
 		setFlushNonce((n) => n + 1);
 	}, [flush]);
 

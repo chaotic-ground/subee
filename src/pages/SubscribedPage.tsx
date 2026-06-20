@@ -51,29 +51,25 @@ export function SubscribedPage({
 	// the first load after login, newly added accounts, and new-post polling.
 	const { pullDistance, armed } = usePullToRefresh(scrollContainerRef, refresh);
 
-	// A user-initiated flush ("N new" tap) scrolls to the newest post so the new
-	// posts are what the user lands on; the divider stays as the seam below them.
+	// Both a user-initiated flush ("N new" tap, flushNonce) and the mount-seeded
+	// boundary divider (cold start after a background sync — the "tapped the
+	// notification after hours away" case, boundaryNonce) land the user on the
+	// seam, centered: the new/unseen posts above the fold, the already-seen ones
+	// below. The cold-start case also overrides scroll-anchor restore for that
+	// open (see useRestoreScrollAnchor's skip below) so the two don't fight.
 	const lastFlushNonce = useRef(flushNonce);
-	useEffect(() => {
-		if (flushNonce === lastFlushNonce.current) return;
-		lastFlushNonce.current = flushNonce;
-		requestAnimationFrame(() =>
-			scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" }),
-		);
-	}, [flushNonce, scrollContainerRef]);
-
-	// The mount-seeded boundary divider (cold start after a background sync — the
-	// "tapped the notification after hours away" case) lands the user at the seam,
-	// centered: the unseen posts above the fold, the already-seen ones below. This
-	// overrides scroll-anchor restore for that open (see useRestoreScrollAnchor's
-	// skip below) so the two don't fight over the position.
 	const lastBoundaryNonce = useRef(boundaryNonce);
 	useEffect(() => {
-		if (boundaryNonce === lastBoundaryNonce.current) return;
+		if (
+			flushNonce === lastFlushNonce.current &&
+			boundaryNonce === lastBoundaryNonce.current
+		)
+			return;
+		lastFlushNonce.current = flushNonce;
 		lastBoundaryNonce.current = boundaryNonce;
 		const el = scrollContainerRef.current;
 		if (el) requestAnimationFrame(() => centerScrollOnDivider(el));
-	}, [boundaryNonce, scrollContainerRef]);
+	}, [flushNonce, boundaryNonce, scrollContainerRef]);
 
 	// Track scroll position for the floating button and the status grid:
 	// - the status grid and the top-of-feed signals show only at the very top
