@@ -8,6 +8,7 @@ import { PostList } from "../components/PostList";
 import { PULL_THRESHOLD, usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useRestoreScrollAnchor } from "../hooks/useRestoreScrollAnchor";
 import { useSubscribedFeed } from "../hooks/useSubscribedFeed";
+import { centerScrollOnDivider } from "./restoreScrollAnchor";
 import type { ScrollAnchor } from "../types";
 
 interface SubscribedPageProps {
@@ -41,6 +42,7 @@ export function SubscribedPage({
 		dividerPostId,
 		pollProgress,
 		flushNonce,
+		boundaryNonce,
 		unloadedCount,
 	} = useSubscribedFeed(handles, instanceUrl, accessToken);
 
@@ -51,9 +53,6 @@ export function SubscribedPage({
 
 	// A user-initiated flush ("N new" tap) scrolls to the newest post so the new
 	// posts are what the user lands on; the divider stays as the seam below them.
-	// The mount-seeded boundary divider (cold start after background sync) bumps
-	// no nonce, so it never triggers this scroll — it marks the boundary in place
-	// and the user scrolls up to it (or taps the back-to-top button) on demand.
 	const lastFlushNonce = useRef(flushNonce);
 	useEffect(() => {
 		if (flushNonce === lastFlushNonce.current) return;
@@ -62,6 +61,19 @@ export function SubscribedPage({
 			scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" }),
 		);
 	}, [flushNonce, scrollContainerRef]);
+
+	// The mount-seeded boundary divider (cold start after a background sync — the
+	// "tapped the notification after hours away" case) lands the user at the seam,
+	// centered: the unseen posts above the fold, the already-seen ones below. This
+	// overrides scroll-anchor restore for that open (see useRestoreScrollAnchor's
+	// skip below) so the two don't fight over the position.
+	const lastBoundaryNonce = useRef(boundaryNonce);
+	useEffect(() => {
+		if (boundaryNonce === lastBoundaryNonce.current) return;
+		lastBoundaryNonce.current = boundaryNonce;
+		const el = scrollContainerRef.current;
+		if (el) requestAnimationFrame(() => centerScrollOnDivider(el));
+	}, [boundaryNonce, scrollContainerRef]);
 
 	// Track scroll position for the floating button and the status grid:
 	// - the status grid and the top-of-feed signals show only at the very top
@@ -94,11 +106,14 @@ export function SubscribedPage({
 	// Initial load is driven by useSubscribedFeed (auto-loads uninitialized
 	// accounts, including after importing subscriptions).
 
+	// Skip anchor restore when a boundary divider was seeded at mount — that open
+	// centers the seam instead (the effect above), and running both would fight.
 	useRestoreScrollAnchor(
 		scrollContainerRef,
 		initialAnchor,
 		loading,
 		posts.length,
+		boundaryNonce > 0,
 	);
 
 	if (handles.size === 0) {

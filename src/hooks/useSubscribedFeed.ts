@@ -64,8 +64,10 @@ export function useSubscribedFeed(
 			// posts end and already-seen ones begin: the same seam a manual flush
 			// draws, but seeded at mount with no network load. SubscribedPage shows
 			// it in place (no auto-scroll) and offers a "Jump to new" button.
-			if (added > 0 && boundaryId)
+			if (added > 0 && boundaryId) {
 				setDividerPostId((prev) => prev ?? boundaryId);
+				setBoundaryNonce((n) => n + 1);
+			}
 			// Reflect how fresh the feed is in the "checked Xm ago" label. Read the
 			// cursor cache after consuming native results so a background sync that
 			// just delivered counts. Max-merge keeps this correct regardless of
@@ -108,8 +110,12 @@ export function useSubscribedFeed(
 	const [pollProgress, setPollProgress] = useState<PollProgress | null>(null);
 	// Bumped only by a user-initiated flush ("N new" tap) so SubscribedPage can
 	// scroll to the newest post — distinct from the mount-seeded boundary divider,
-	// which must mark its place without scrolling.
+	// which scrolls to center the seam (see boundaryNonce).
 	const [flushNonce, setFlushNonce] = useState(0);
+	// Bumped when the mount effect seeds the boundary divider (cold start after a
+	// background sync) so SubscribedPage can scroll to center that seam — the
+	// unseen posts above it, the already-seen ones below.
+	const [boundaryNonce, setBoundaryNonce] = useState(0);
 	// Subscribed accounts that have no cursor yet (first login, or a freshly
 	// subscribed/imported account) — i.e. would be loaded by the next refresh().
 	const [unloadedCount, setUnloadedCount] = useState(0);
@@ -436,6 +442,7 @@ export function useSubscribedFeed(
 		dividerPostId,
 		pollProgress,
 		flushNonce,
+		boundaryNonce,
 		unloadedCount,
 	};
 }

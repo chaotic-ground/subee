@@ -11,14 +11,15 @@ export function useRestoreScrollAnchor(
 	initialAnchor: ScrollAnchor,
 	loading: boolean,
 	postsLength: number,
+	skip = false,
 ): void {
 	const restoredRef = useRef(false);
 	useEffect(() => {
-		if (restoredRef.current || loading || postsLength === 0) return;
+		if (skip || restoredRef.current || loading || postsLength === 0) return;
 		if (!initialAnchor.id) return;
 		const el = scrollContainerRef.current;
 		if (!el) return;
 		restoredRef.current = true;
 		restoreScrollAnchor(el, initialAnchor);
-	}, [loading, postsLength, initialAnchor, scrollContainerRef]);
+	}, [loading, postsLength, initialAnchor, scrollContainerRef, skip]);
 }
