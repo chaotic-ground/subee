@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0](https://github.com/chaotic-ground/subee/compare/v0.14.0...v0.15.0) (2026-06-20)
+
+
+### Features
+
+* center the seam on "N new" flush, matching cold-start entry ([dd78014](https://github.com/chaotic-ground/subee/commit/dd78014be4cbad2c48047a6ee0ca6ede35466dea))
+* center the seam on "N new" flush, matching cold-start entry ([7b86913](https://github.com/chaotic-ground/subee/commit/7b86913611859802f5ff9e09669fb921b3c23d53))
+
 ## [0.14.0](https://github.com/chaotic-ground/subee/compare/v0.13.2...v0.14.0) (2026-06-20)
 
 
