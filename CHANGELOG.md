@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.0](https://github.com/chaotic-ground/subee/compare/v0.15.1...v0.16.0) (2026-06-21)
+
+
+### Features
+
+* make "+ Subscribe" the prominent CTA, mute "Subscribed" ([d834d8d](https://github.com/chaotic-ground/subee/commit/d834d8d2cc9622dc737f26aeae7a2dfefa811561))
+* make "+ Subscribe" the prominent CTA, mute "Subscribed" ([5d43cfe](https://github.com/chaotic-ground/subee/commit/5d43cfec75ff9b9eac6cd1f8071a1bc64b72003c))
+
 ## [0.15.1](https://github.com/chaotic-ground/subee/compare/v0.15.0...v0.15.1) (2026-06-21)
 
 
