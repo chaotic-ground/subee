@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.1](https://github.com/chaotic-ground/subee/compare/v0.15.0...v0.15.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* retry divider centering until the feed actually renders on cold start ([b0e7163](https://github.com/chaotic-ground/subee/commit/b0e7163348260754940414359ed5d847766a8919))
+* retry divider centering until the feed renders on cold start ([75e414c](https://github.com/chaotic-ground/subee/commit/75e414c159dd7e53f65579b1fa55060daed8a825))
+
 ## [0.15.0](https://github.com/chaotic-ground/subee/compare/v0.14.0...v0.15.0) (2026-06-20)
 
 
