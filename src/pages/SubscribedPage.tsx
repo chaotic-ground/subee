@@ -1,7 +1,7 @@
 import { faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AccountStatusGrid } from "../components/AccountStatusGrid";
 import { FloatingRefreshButton } from "../components/FloatingRefreshButton";
 import { PostList } from "../components/PostList";
@@ -57,19 +57,36 @@ export function SubscribedPage({
 	// seam, centered: the new/unseen posts above the fold, the already-seen ones
 	// below. The cold-start case also overrides scroll-anchor restore for that
 	// open (see useRestoreScrollAnchor's skip below) so the two don't fight.
+	//
+	// A bump arms a pending center rather than firing once-and-for-all: on a
+	// cold start the feed (and thus the divider) renders a beat after the nonce
+	// bumps, once the async-loaded subscriptions arrive. centerWhenReady centers
+	// only once the [data-divider] element actually exists, and the divider's own
+	// ref callback (onDividerRef below) re-invokes it the moment it mounts — so a
+	// late-rendering feed still lands centered instead of stranding the user at
+	// the top. The pending flag is consumed on success so it fires exactly once.
+	const pendingCenterRef = useRef(false);
+	const centerWhenReady = useCallback(() => {
+		if (!pendingCenterRef.current) return;
+		const el = scrollContainerRef.current;
+		if (!el || !el.querySelector("[data-divider]")) return;
+		pendingCenterRef.current = false;
+		centerScrollOnDivider(el);
+	}, [scrollContainerRef]);
+
 	const lastFlushNonce = useRef(flushNonce);
 	const lastBoundaryNonce = useRef(boundaryNonce);
 	useEffect(() => {
 		if (
-			flushNonce === lastFlushNonce.current &&
-			boundaryNonce === lastBoundaryNonce.current
-		)
-			return;
-		lastFlushNonce.current = flushNonce;
-		lastBoundaryNonce.current = boundaryNonce;
-		const el = scrollContainerRef.current;
-		if (el) requestAnimationFrame(() => centerScrollOnDivider(el));
-	}, [flushNonce, boundaryNonce, scrollContainerRef]);
+			flushNonce !== lastFlushNonce.current ||
+			boundaryNonce !== lastBoundaryNonce.current
+		) {
+			lastFlushNonce.current = flushNonce;
+			lastBoundaryNonce.current = boundaryNonce;
+			pendingCenterRef.current = true;
+		}
+		centerWhenReady();
+	}, [flushNonce, boundaryNonce, centerWhenReady]);
 
 	// Track scroll position for the floating button and the status grid:
 	// - the status grid and the top-of-feed signals show only at the very top
@@ -177,6 +194,7 @@ export function SubscribedPage({
 					accessToken={accessToken}
 					scrollContainerRef={scrollContainerRef}
 					dividerPostId={dividerPostId}
+					onDividerRef={centerWhenReady}
 				/>
 			)}
 		</>
