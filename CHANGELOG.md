@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/chaotic-ground/subee/compare/v0.16.0...v0.17.0) (2026-06-21)
+
+
+### Features
+
+* long-press a post timestamp to copy its URL ([86378a1](https://github.com/chaotic-ground/subee/commit/86378a1d05526c432b1272ec591e32a10959d213))
+* long-press a post's timestamp to copy its URL ([9b9d831](https://github.com/chaotic-ground/subee/commit/9b9d831bf49b73037a04c29e8fe68bcacb41028f))
+
 ## [0.16.0](https://github.com/chaotic-ground/subee/compare/v0.15.1...v0.16.0) (2026-06-21)
 
 
