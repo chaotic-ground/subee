@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.1](https://github.com/chaotic-ground/subee/compare/v0.17.0...v0.17.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* restore double-rAF timing so cold-start divider centering works ([1165d6a](https://github.com/chaotic-ground/subee/commit/1165d6a3cc4c076965624299d9df19e2c957b067))
+* restore double-rAF timing so cold-start divider centering works ([1165d6a](https://github.com/chaotic-ground/subee/commit/1165d6a3cc4c076965624299d9df19e2c957b067))
+* restore double-rAF timing so cold-start divider centering works ([371ef53](https://github.com/chaotic-ground/subee/commit/371ef53a68a6d2bbc26da48e5f34636cc140e3ba))
+
 ## [0.17.0](https://github.com/chaotic-ground/subee/compare/v0.16.0...v0.17.0) (2026-06-21)
 
 
