@@ -1,7 +1,7 @@
 import { faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { RefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountStatusGrid } from "../components/AccountStatusGrid";
 import { FloatingRefreshButton } from "../components/FloatingRefreshButton";
 import { PostList } from "../components/PostList";
@@ -58,35 +58,34 @@ export function SubscribedPage({
 	// below. The cold-start case also overrides scroll-anchor restore for that
 	// open (see useRestoreScrollAnchor's skip below) so the two don't fight.
 	//
-	// A bump arms a pending center rather than firing once-and-for-all: on a
-	// cold start the feed (and thus the divider) renders a beat after the nonce
-	// bumps, once the async-loaded subscriptions arrive. centerWhenReady centers
-	// only once the [data-divider] element actually exists, and the divider's own
-	// ref callback (onDividerRef below) re-invokes it the moment it mounts — so a
-	// late-rendering feed still lands centered instead of stranding the user at
-	// the top. The pending flag is consumed on success so it fires exactly once.
-	const pendingCenterRef = useRef(false);
-	const centerWhenReady = useCallback(() => {
-		if (!pendingCenterRef.current) return;
-		const el = scrollContainerRef.current;
-		if (!el || !el.querySelector("[data-divider]")) return;
-		pendingCenterRef.current = false;
-		centerScrollOnDivider(el);
-	}, [scrollContainerRef]);
-
+	// Two separate effects, each wrapping centerScrollOnDivider in a
+	// requestAnimationFrame, match the v0.14.0 double-rAF timing that ensures
+	// the browser has completed its first paint before realign's step reads
+	// offsetTop. Without the outer rAF, contentVisibility:auto elements above
+	// the divider report 0 intrinsic height (their "last remembered size" cache
+	// has not been populated yet), making target.offsetTop compute to 0 and
+	// leaving the user stranded at the top. The divider is always in the DOM
+	// when these nonces bump: for flushNonce the feed is already rendered; for
+	// boundaryNonce, App.tsx waits for subscriptions before mounting
+	// SubscribedPage and the posts + nonce bump are batched in the same React
+	// render, so [data-divider] is present by the time the rAF fires.
 	const lastFlushNonce = useRef(flushNonce);
+	useEffect(() => {
+		if (flushNonce === lastFlushNonce.current) return;
+		lastFlushNonce.current = flushNonce;
+		const el = scrollContainerRef.current;
+		if (!el) return;
+		requestAnimationFrame(() => centerScrollOnDivider(el));
+	}, [flushNonce, scrollContainerRef]);
+
 	const lastBoundaryNonce = useRef(boundaryNonce);
 	useEffect(() => {
-		if (
-			flushNonce !== lastFlushNonce.current ||
-			boundaryNonce !== lastBoundaryNonce.current
-		) {
-			lastFlushNonce.current = flushNonce;
-			lastBoundaryNonce.current = boundaryNonce;
-			pendingCenterRef.current = true;
-		}
-		centerWhenReady();
-	}, [flushNonce, boundaryNonce, centerWhenReady]);
+		if (boundaryNonce === lastBoundaryNonce.current) return;
+		lastBoundaryNonce.current = boundaryNonce;
+		const el = scrollContainerRef.current;
+		if (!el) return;
+		requestAnimationFrame(() => centerScrollOnDivider(el));
+	}, [boundaryNonce, scrollContainerRef]);
 
 	// Track scroll position for the floating button and the status grid:
 	// - the status grid and the top-of-feed signals show only at the very top
@@ -194,7 +193,6 @@ export function SubscribedPage({
 					accessToken={accessToken}
 					scrollContainerRef={scrollContainerRef}
 					dividerPostId={dividerPostId}
-					onDividerRef={centerWhenReady}
 				/>
 			)}
 		</>

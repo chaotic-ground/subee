@@ -39,7 +39,6 @@ interface PostListProps {
 	scrollContainerRef: RefObject<HTMLElement | null>;
 	onMount?: () => void;
 	dividerPostId?: string | null;
-	onDividerRef?: (el: HTMLElement | null) => void;
 }
 
 export function PostList({
@@ -55,7 +54,6 @@ export function PostList({
 	scrollContainerRef,
 	onMount,
 	dividerPostId,
-	onDividerRef,
 }: PostListProps) {
 	useInfiniteScroll(onLoadMore, scrollContainerRef, posts.length);
 
@@ -97,7 +95,6 @@ export function PostList({
 					<PostCardErrorBoundary key={status.id}>
 						{dividerPostId === status.id && (
 							<div
-								ref={onDividerRef}
 								data-divider="true"
 								className="flex items-center gap-3 px-4 py-2 text-xs text-blue-400 select-none"
 							>
