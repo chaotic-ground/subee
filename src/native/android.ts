@@ -145,10 +145,16 @@ export async function consumeNativeSyncResults(
 		added = posts.filter((p) => !known.has(p.id)).length;
 		// Cache is newest-first; its head is the previously-newest seen post.
 		if (added > 0) boundaryId = existing[0]?.id ?? null;
-		await savePostCache(
-			instanceUrl,
-			mergePosts(existing, posts, MAX_CACHED_POSTS),
-		);
+		const toSave = mergePosts(existing, posts, MAX_CACHED_POSTS);
+		// When ≥MAX_CACHED_POSTS new posts arrive the boundary post is truncated out
+		// of the merged list, so PostList never renders [data-divider] and the
+		// centering scroll silently no-ops. Append it as the 201st entry so the
+		// divider always has a DOM target to center on.
+		if (added > 0 && boundaryId && !toSave.some((p) => p.id === boundaryId)) {
+			const boundaryPost = existing.find((p) => p.id === boundaryId);
+			if (boundaryPost) toSave.push(boundaryPost);
+		}
+		await savePostCache(instanceUrl, toSave);
 	}
 
 	const updates = parsed.cursors ?? [];
