@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.2](https://github.com/chaotic-ground/subee/compare/v0.17.1...v0.17.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* preserve boundary post when ≥200 new posts arrive from background sync ([2c4734d](https://github.com/chaotic-ground/subee/commit/2c4734d1132cd084f5bb4e9626f034ccc1717370))
+* preserve boundary post when ≥200 new posts arrive from background sync ([daf3a5a](https://github.com/chaotic-ground/subee/commit/daf3a5a4f696960c5127a853937a5ccfa8b8ee34))
+
 ## [0.17.1](https://github.com/chaotic-ground/subee/compare/v0.17.0...v0.17.1) (2026-06-22)
 
 
