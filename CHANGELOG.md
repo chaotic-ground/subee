@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/chaotic-ground/subee/compare/v0.18.1...v0.19.0) (2026-06-27)
+
+
+### Features
+
+* pull-to-refresh mirrors the visible floating button's action ([b5e4430](https://github.com/chaotic-ground/subee/commit/b5e4430a0bfefd9d0f416f2b9537ee94fc9c0912))
+
 ## [0.18.1](https://github.com/chaotic-ground/subee/compare/v0.18.0...v0.18.1) (2026-06-27)
 
 
