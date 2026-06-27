@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/chaotic-ground/subee/compare/v0.18.0...v0.18.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* drop the 🦋 marker on Bridgy Fed posts with merged Bluesky counts ([5b52283](https://github.com/chaotic-ground/subee/commit/5b52283bafc0f845263a8a2f6a0a1ec31dfde6e3))
+
 ## [0.18.0](https://github.com/chaotic-ground/subee/compare/v0.17.2...v0.18.0) (2026-06-27)
 
 
