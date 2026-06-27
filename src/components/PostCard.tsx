@@ -517,14 +517,6 @@ export function PostCard({
 						<FontAwesomeIcon icon={faHeart} />
 						{displayFavourites}
 					</button>
-					{blueskyStats && (
-						<span
-							title="Counts include Bluesky (AtProto) likes, reposts, and replies"
-							className="select-none"
-						>
-							🦋
-						</span>
-					)}
 					<a
 						href={actual.url ?? "#"}
 						target="_blank"
