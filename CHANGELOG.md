@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/chaotic-ground/subee/compare/v0.17.2...v0.18.0) (2026-06-27)
+
+
+### Features
+
+* fold Bluesky (AtProto) engagement into Bridgy Fed post counts ([e94fd18](https://github.com/chaotic-ground/subee/commit/e94fd18d5620a8da22d29e7adb713aa0be1e9fb5))
+
 ## [0.17.2](https://github.com/chaotic-ground/subee/compare/v0.17.1...v0.17.2) (2026-06-23)
 
 
