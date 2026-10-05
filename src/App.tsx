@@ -117,6 +117,9 @@ export default function App() {
 		}
 	};
 	const subscribedScrollRef = useRef<HTMLDivElement>(null);
+	// Only the anchor at launch matters; read it once rather than re-parsing
+	// localStorage on every App render.
+	const [initialAnchor] = useState(readAnchor);
 	const {
 		handles,
 		loading: subsLoading,
@@ -251,7 +254,7 @@ export default function App() {
 							accessToken={auth.accessToken}
 							onSubscribe={handleSubscribe}
 							isSubscribed={isSubscribed}
-							initialAnchor={readAnchor()}
+							initialAnchor={initialAnchor}
 							scrollContainerRef={subscribedScrollRef}
 						/>
 					</div>

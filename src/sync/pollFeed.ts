@@ -16,6 +16,10 @@ import { concurrent, FEED_CONCURRENCY } from "./concurrent";
 export interface PollFeedOptions {
 	instanceUrl: string;
 	accessToken: string;
+	// Current subscriptions. Cursors for handles not in it (unsubscribed) are
+	// neither polled nor kept, so an unsubscribe stops the requests for good.
+	// Omitted, every cached cursor is polled.
+	handles?: ReadonlySet<string>;
 	onProgress?: (done: number, total: number) => void;
 	onAccountStatus?: (
 		handle: string,
@@ -34,6 +38,7 @@ export interface PollFeedResult {
 export async function pollFeed({
 	instanceUrl,
 	accessToken,
+	handles,
 	onProgress,
 	onAccountStatus,
 }: PollFeedOptions): Promise<PollFeedResult> {
@@ -42,17 +47,27 @@ export async function pollFeed({
 		return { newPosts: [], totalPosts: 0 };
 	}
 
-	const cursors: AccountCursor[] = cached
+	const subscribed = handles
+		? cached.filter(([handle]) => handles.has(handle))
+		: cached;
+	const pruned = subscribed.length !== cached.length;
+
+	// Poll every resolved account (a failed lookup leaves an empty accountId).
+	// One without a sinceId yet — it had no posts when first loaded, or that
+	// first fetch failed — is polled without since_id; its newest page sets the
+	// cursor. Skipping it would leave it silently unpolled forever.
+	const cursors: AccountCursor[] = subscribed
 		.map(([, c]) => c)
-		.filter((c) => c.sinceId)
+		.filter((c) => c.accountId)
 		.sort((a, b) => (a.lastPolledAt ?? 0) - (b.lastPolledAt ?? 0));
 
 	if (cursors.length === 0) {
+		if (pruned) await saveCursorCache(instanceUrl, subscribed);
 		const existing = (await loadPostCache(instanceUrl)) ?? [];
 		return { newPosts: [], totalPosts: existing.length };
 	}
 
-	const cursorMap = new Map(cached);
+	const cursorMap = new Map(subscribed);
 	const newPosts: mastodon.v1.Status[] = [];
 	let done = 0;
 	// Once the instance rate-limits us, stop launching new requests this round
