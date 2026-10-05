@@ -39,7 +39,10 @@ describe("pollFeed", () => {
 		expect(mockFetchAccountStatuses).not.toHaveBeenCalled();
 	});
 
-	it("returns empty newPosts but real totalPosts when no cursor has sinceId", async () => {
+	it("polls an account that has no sinceId yet and sets one", async () => {
+		// An account that had no posts at first load (or whose first fetch
+		// failed) has a cursor but no sinceId. It must still be polled, or a new
+		// account that starts posting later would never show up.
 		await saveCursorCache(INSTANCE, [
 			[
 				"@a@test.example",
@@ -51,15 +54,69 @@ describe("pollFeed", () => {
 				},
 			],
 		]);
+		mockFetchAccountStatuses.mockResolvedValue([
+			makeStatus("a-first", "2026-02-01T00:00:00Z"),
+		]);
+
+		const res = await pollFeed({ instanceUrl: INSTANCE, accessToken: "tok" });
+
+		expect(mockFetchAccountStatuses).toHaveBeenCalledWith(
+			INSTANCE,
+			"a1",
+			{ sinceId: undefined, limit: 20 },
+			"tok",
+		);
+		expect(res.newPosts.map((p) => p.id)).toEqual(["a-first"]);
+		const updated = new Map((await loadCursorCache(INSTANCE)) ?? []);
+		expect(updated.get("@a@test.example")?.sinceId).toBe("a-first");
+	});
+
+	it("skips failed lookups and returns the cached total", async () => {
+		await saveCursorCache(INSTANCE, [
+			[
+				"@a@test.example",
+				{
+					handle: "@a@test.example",
+					accountId: "",
+					instanceUrl: INSTANCE,
+					done: true,
+				},
+			],
+		]);
 		await savePostCache(INSTANCE, [makeStatus("x", "2026-01-01T00:00:00Z")]);
 
-		const res = await pollFeed({
+		const res = await pollFeed({ instanceUrl: INSTANCE, accessToken: "tok" });
+
+		expect(res).toEqual({ newPosts: [], totalPosts: 1 });
+		expect(mockFetchAccountStatuses).not.toHaveBeenCalled();
+	});
+
+	it("neither polls nor keeps cursors of unsubscribed accounts", async () => {
+		await saveCursorCache(
+			INSTANCE,
+			["a", "b"].map((n) => [
+				`@${n}@test.example`,
+				{
+					handle: `@${n}@test.example`,
+					accountId: `${n}1`,
+					instanceUrl: INSTANCE,
+					sinceId: `s-${n}`,
+					done: true,
+				},
+			]),
+		);
+		mockFetchAccountStatuses.mockResolvedValue([]);
+
+		await pollFeed({
 			instanceUrl: INSTANCE,
 			accessToken: "tok",
+			handles: new Set(["@a@test.example"]),
 		});
-		expect(res.newPosts).toEqual([]);
-		expect(res.totalPosts).toBe(1);
-		expect(mockFetchAccountStatuses).not.toHaveBeenCalled();
+
+		expect(mockFetchAccountStatuses).toHaveBeenCalledTimes(1);
+		expect(mockFetchAccountStatuses.mock.calls[0][1]).toBe("a1");
+		const saved = (await loadCursorCache(INSTANCE)) ?? [];
+		expect(saved.map(([h]) => h)).toEqual(["@a@test.example"]);
 	});
 
 	it("polls eligible cursors, updates sinceId, and merges posts", async () => {

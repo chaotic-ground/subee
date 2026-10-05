@@ -5,6 +5,7 @@ import { precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst } from "workbox-strategies";
 import { loadAuth } from "../store/auth";
+import { getSubscriptions } from "../store/subscriptions";
 import { FEED_SYNC_TAG } from "../sync/feedSync";
 import { pollFeed } from "../sync/pollFeed";
 
@@ -29,9 +30,12 @@ async function runFeedSync(): Promise<void> {
 	try {
 		const auth = await loadAuth();
 		if (!auth) return;
+		const subscriptions = await getSubscriptions();
 		await pollFeed({
 			instanceUrl: auth.instanceUrl,
 			accessToken: auth.accessToken,
+			// An empty read (storage hiccup) must not prune every cursor.
+			handles: subscriptions.size > 0 ? subscriptions : undefined,
 		});
 	} catch {
 		// silent fail — wait for the next sync

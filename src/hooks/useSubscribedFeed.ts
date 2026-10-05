@@ -46,6 +46,9 @@ export function useSubscribedFeed(
 ) {
 	const [posts, setPosts] = useState<mastodon.v1.Status[]>([]);
 
+	// Mount-only restore. accessToken only feeds the native push and
+	// pruneUnsubscribed is stable, so neither should re-run it.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: see above
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -83,6 +86,12 @@ export function useSubscribedFeed(
 						cursors.map(([h, c]) => [h, { ...c, done: true }]),
 					);
 					if (cursors.length > 0) initializedRef.current = true;
+					// Drop cursors of accounts unsubscribed since they were saved, so
+					// neither the next poll nor the native worker keeps fetching them.
+					if (pruneUnsubscribed()) {
+						await saveCursorCache(instanceUrl, [...cursorsRef.current]);
+						void pushNativeSyncState(instanceUrl, accessToken);
+					}
 				}
 			}
 			// Cursors are as-restored-as-they'll-get (the cache is empty on a first
@@ -143,6 +152,20 @@ export function useSubscribedFeed(
 	const pollingRef = useRef(false);
 	// After a 429, don't poll again until this timestamp (ms epoch).
 	const rateLimitedUntilRef = useRef(0);
+
+	// Remove cursors for handles no longer subscribed. Returns whether anything
+	// was removed (the caller persists). Re-subscribing later just shows the
+	// account as unloaded again; its lookup is cached, so that's cheap.
+	const pruneUnsubscribed = useCallback((): boolean => {
+		let removed = false;
+		for (const handle of [...cursorsRef.current.keys()]) {
+			if (!handlesRef.current.has(handle)) {
+				cursorsRef.current.delete(handle);
+				removed = true;
+			}
+		}
+		return removed;
+	}, []);
 
 	const flush = useCallback(() => {
 		if (pendingRef.current.length === 0) return;
@@ -222,6 +245,7 @@ export function useSubscribedFeed(
 			const { newPosts, rateLimitedUntil } = await pollFeed({
 				instanceUrl,
 				accessToken,
+				handles: handlesRef.current,
 				onProgress: (done, total) => setPollProgress({ done, total }),
 				// A background poll must NOT light up the initial-load dots. It
 				// shares accountStatuses with the initial load, so ignore the
@@ -253,6 +277,10 @@ export function useSubscribedFeed(
 					);
 				}
 			}
+			// An unsubscribe that landed mid-poll: pollFeed saved with the handle
+			// set it started with, so drop the stragglers now.
+			if (pruneUnsubscribed())
+				await saveCursorCache(instanceUrl, [...cursorsRef.current]);
 			void pushNativeSyncState(instanceUrl, accessToken);
 			if (newPosts.length > 0) {
 				bufferRef.current.push(...newPosts);
@@ -263,101 +291,130 @@ export function useSubscribedFeed(
 			pollingRef.current = false;
 			setPollProgress(null);
 		}
-	}, [instanceUrl, accessToken]);
+	}, [instanceUrl, accessToken, pruneUnsubscribed]);
 
-	const fetchMore = useCallback(async () => {
-		// Don't paginate while a poll is in flight — poll refreshes cursors from
-		// disk and the two would race on cursorsRef.
-		if (loadingRef.current || pollingRef.current) return;
-		loadingRef.current = true;
-		setLoading(true);
-		setError(null);
-
-		// Resolve cursors for any subscribed handle without one yet (first load
-		// after login, or accounts added by subscribe/import). This is the only
-		// place resolution happens, and fetchMore only ever runs from an explicit
-		// user load (pull-to-refresh / Refresh) or infinite scroll — never on its
-		// own at app open.
-		const resolved = await resolveMissingCursors();
-		const didInit = resolved > 0;
-
-		// On the initial build into a feed that already shows posts, stage the
-		// fetched posts in the buffer ("N new") instead of inserting them while
-		// the user may be reading. An empty feed has nothing to disrupt, so it
-		// fills directly; pagination (older posts) also appends directly.
-		const stageToBuffer = didInit && postsRef.current.length > 0;
-		const collected: mastodon.v1.Status[] = [];
-
-		try {
-			const pending = [...cursorsRef.current.values()].filter(
+	// Fetch the next page for every cursor that has one pending. With
+	// `resolve`, first resolve subscribed accounts that have no cursor yet —
+	// that's the explicit load (refresh()). Infinite scroll passes false: it
+	// only pages loaded accounts, so scrolling never kicks off a first load.
+	const fetchPending = useCallback(
+		async (resolve: boolean) => {
+			// Don't paginate while a poll is in flight — poll refreshes cursors from
+			// disk and the two would race on cursorsRef.
+			if (loadingRef.current || pollingRef.current) return;
+			// Nothing to page (the common case once a restored feed's cursors are all
+			// `done`): bail before touching loading state or storage, since infinite
+			// scroll calls this on every scroll near the bottom.
+			const hasPending = [...cursorsRef.current.values()].some(
 				(c) => !c.done && c.accountId,
 			);
-			if (pending.length === 0) return;
-			let completed = 0;
+			const hasMissing =
+				resolve && [...handles].some((h) => !cursorsRef.current.has(h));
+			if (!hasPending && !hasMissing) return;
+			loadingRef.current = true;
+			setLoading(true);
+			setError(null);
 
-			await concurrent(
-				pending.map((cursor) => async () => {
-					try {
-						const results = await fetchAccountStatuses(
-							cursor.instanceUrl,
-							cursor.accountId,
-							{ limit: PAGE_SIZE, maxId: cursor.maxId },
-							accessToken,
-						);
-						if (results.length > 0) {
-							cursorsRef.current.set(cursor.handle, {
-								...cursor,
-								done: results.length < PAGE_SIZE,
-								maxId: results[results.length - 1].id,
-								sinceId: cursor.sinceId ?? results[0].id,
-							});
-							if (stageToBuffer) collected.push(...results);
-							else pendingRef.current.push(...results);
-						} else {
-							cursorsRef.current.set(cursor.handle, { ...cursor, done: true });
+			// Resolve cursors for any subscribed handle without one yet (first load
+			// after login, or accounts added by subscribe/import). This is the only
+			// place resolution happens, and only on an explicit user load
+			// (pull-to-refresh / 'Load N accounts') — never at app open or on scroll.
+			const resolved = resolve ? await resolveMissingCursors() : 0;
+			const didInit = resolved > 0;
+
+			// On the initial build into a feed that already shows posts, stage the
+			// fetched posts in the buffer ("N new") instead of inserting them while
+			// the user may be reading. An empty feed has nothing to disrupt, so it
+			// fills directly; pagination (older posts) also appends directly.
+			const stageToBuffer = didInit && postsRef.current.length > 0;
+			const collected: mastodon.v1.Status[] = [];
+
+			try {
+				const pending = [...cursorsRef.current.values()].filter(
+					(c) => !c.done && c.accountId,
+				);
+				if (pending.length === 0) return;
+				let completed = 0;
+
+				await concurrent(
+					pending.map((cursor) => async () => {
+						try {
+							const results = await fetchAccountStatuses(
+								cursor.instanceUrl,
+								cursor.accountId,
+								{ limit: PAGE_SIZE, maxId: cursor.maxId },
+								accessToken,
+							);
+							if (results.length > 0) {
+								cursorsRef.current.set(cursor.handle, {
+									...cursor,
+									done: results.length < PAGE_SIZE,
+									maxId: results[results.length - 1].id,
+									sinceId: cursor.sinceId ?? results[0].id,
+								});
+								if (stageToBuffer) collected.push(...results);
+								else pendingRef.current.push(...results);
+							} else {
+								cursorsRef.current.set(cursor.handle, {
+									...cursor,
+									done: true,
+								});
+							}
+							setAccountStatuses((prev) =>
+								new Map(prev).set(cursor.handle, "done"),
+							);
+						} catch {
+							setAccountStatuses((prev) =>
+								new Map(prev).set(cursor.handle, "failed"),
+							);
 						}
-						setAccountStatuses((prev) =>
-							new Map(prev).set(cursor.handle, "done"),
-						);
-					} catch {
-						setAccountStatuses((prev) =>
-							new Map(prev).set(cursor.handle, "failed"),
-						);
-					}
-					completed++;
-					if (!stageToBuffer && completed % FLUSH_EVERY === 0) flush();
-				}),
-				FEED_CONCURRENCY,
-			);
+						completed++;
+						if (!stageToBuffer && completed % FLUSH_EVERY === 0) flush();
+					}),
+					FEED_CONCURRENCY,
+				);
 
-			if (stageToBuffer) {
-				const known = new Set([
-					...postsRef.current.map((p) => p.id),
-					...bufferRef.current.map((p) => p.id),
-				]);
-				const fresh = collected.filter((p) => !known.has(p.id));
-				if (fresh.length > 0) {
-					bufferRef.current.push(...fresh);
-					setStagedCount(bufferRef.current.length);
+				if (stageToBuffer) {
+					const known = new Set([
+						...postsRef.current.map((p) => p.id),
+						...bufferRef.current.map((p) => p.id),
+					]);
+					const fresh = collected.filter((p) => !known.has(p.id));
+					if (fresh.length > 0) {
+						bufferRef.current.push(...fresh);
+						setStagedCount(bufferRef.current.length);
+					}
+				} else {
+					flush(); // final flush for any remainder
 				}
-			} else {
-				flush(); // final flush for any remainder
+			} catch (e) {
+				setError(String(e));
+			} finally {
+				pruneUnsubscribed();
+				await saveCursorCache(instanceUrl, [...cursorsRef.current.entries()]);
+				void pushNativeSyncState(instanceUrl, accessToken);
+				// Resolution ran for the missing accounts — refresh the count so the
+				// "Load N accounts" cue clears once they're loaded.
+				setUnloadedCount(
+					[...handlesRef.current].filter((h) => !cursorsRef.current.has(h))
+						.length,
+				);
+				loadingRef.current = false;
+				setLoading(false);
 			}
-		} catch (e) {
-			setError(String(e));
-		} finally {
-			await saveCursorCache(instanceUrl, [...cursorsRef.current.entries()]);
-			void pushNativeSyncState(instanceUrl, accessToken);
-			// Resolution ran for the missing accounts — refresh the count so the
-			// "Load N accounts" cue clears once they're loaded.
-			setUnloadedCount(
-				[...handlesRef.current].filter((h) => !cursorsRef.current.has(h))
-					.length,
-			);
-			loadingRef.current = false;
-			setLoading(false);
-		}
-	}, [instanceUrl, accessToken, resolveMissingCursors, flush]);
+		},
+		[
+			handles,
+			instanceUrl,
+			accessToken,
+			resolveMissingCursors,
+			flush,
+			pruneUnsubscribed,
+		],
+	);
+
+	const fetchMore = useCallback(() => fetchPending(true), [fetchPending]);
+	const loadOlder = useCallback(() => fetchPending(false), [fetchPending]);
 
 	// Pull in posts the native background worker fetched while we were closed and
 	// surface them as "N new". On a cold start the mount effect already adopts
@@ -401,7 +458,15 @@ export function useSubscribedFeed(
 		setUnloadedCount(
 			[...handles].filter((h) => !cursorsRef.current.has(h)).length,
 		);
-	}, [handles]);
+		// An unsubscribe: forget the account's cursor so polling (here, in the
+		// service worker, and in the native worker) stops fetching it. While a
+		// load or poll is running, it prunes when it finishes instead.
+		if (loadingRef.current || pollingRef.current) return;
+		if (pruneUnsubscribed())
+			void saveCursorCache(instanceUrl, [...cursorsRef.current]).then(() =>
+				pushNativeSyncState(instanceUrl, accessToken),
+			);
+	}, [handles, instanceUrl, accessToken, pruneUnsubscribed]);
 
 	// The single explicit-load entry point, wired to pull-to-refresh and the
 	// Refresh button. Nothing loads automatically at app open. If any subscribed
@@ -436,7 +501,7 @@ export function useSubscribedFeed(
 		posts,
 		loading,
 		error,
-		fetchMore,
+		loadOlder,
 		flushBuffer,
 		refresh,
 		accountStatuses,

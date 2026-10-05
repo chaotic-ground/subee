@@ -35,7 +35,7 @@ export function SubscribedPage({
 		posts,
 		loading,
 		error,
-		fetchMore,
+		loadOlder,
 		flushBuffer,
 		refresh,
 		accountStatuses,
@@ -135,9 +135,6 @@ export function SubscribedPage({
 		statusValues.length > 0 &&
 		(loading || statusValues.some((s) => s === "failed"));
 
-	// Initial load is driven by useSubscribedFeed (auto-loads uninitialized
-	// accounts, including after importing subscriptions).
-
 	// Skip anchor restore when a boundary divider was seeded at mount — that open
 	// centers the seam instead (the effect above), and running both would fight.
 	useRestoreScrollAnchor(
@@ -189,7 +186,7 @@ export function SubscribedPage({
 					posts={posts}
 					loading={loading}
 					error={error}
-					onLoadMore={fetchMore}
+					onLoadMore={loadOlder}
 					onRefresh={flushBuffer}
 					onSubscribe={onSubscribe}
 					isSubscribed={isSubscribed}
