@@ -57,7 +57,7 @@ type FulfillOptions = {
 type Responder = () => FulfillOptions;
 
 // Register the three feed routes (catch-all 404, account lookup, account
-// statuses). Pass responders for the since_id / max_id / base branches; each
+// statuses). Pass responders for the poll (min_id) / max_id / base branches; each
 // defaults to an empty array (base defaults to 30 posts). Responders are
 // functions so callers can make them stateful (see freshOnce).
 export async function mockFeed(
@@ -72,7 +72,7 @@ export async function mockFeed(
 	);
 	await page.route(`${INSTANCE}/api/v1/accounts/acc1/statuses**`, (route) => {
 		const u = new URL(route.request().url());
-		if (u.searchParams.get("since_id"))
+		if (u.searchParams.get("min_id"))
 			return route.fulfill((handlers.since ?? (() => ({ json: [] })))());
 		if (u.searchParams.get("max_id"))
 			return route.fulfill((handlers.max ?? (() => ({ json: [] })))());
@@ -82,7 +82,7 @@ export async function mockFeed(
 	});
 }
 
-// A since_id responder that returns `posts` on the first poll, then [].
+// A poll (min_id) responder that returns `posts` on the first poll, then [].
 export function freshOnce(posts: unknown[]): Responder {
 	let used = false;
 	return () => {
