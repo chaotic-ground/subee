@@ -30,10 +30,37 @@ class SyncStore(context: Context) {
             prefs.edit().putLong(KEY_RATE_LIMITED_UNTIL, value).apply()
         }
 
+    /**
+     * Store the web side's auth + cursors. The web cache can lag behind cursors
+     * this worker already advanced (it only learns of them on consumeResults,
+     * and a cold start pushes before that import is saved), so keep the native
+     * sinceId for any account the worker polled more recently. Otherwise the
+     * next run refetches posts the user already saw.
+     */
     fun saveState(json: String) {
         synchronized(LOCK) {
-            JSONObject(json) // validate before storing
-            prefs.edit().putString(KEY_STATE, json).apply()
+            val incoming = JSONObject(json) // validate before storing
+            val existing = loadState()?.optJSONArray("cursors")
+            val cursors = incoming.optJSONArray("cursors")
+            if (existing != null && cursors != null) {
+                val nativeCursors = HashMap<String, JSONObject>()
+                for (i in 0 until existing.length()) {
+                    val c = existing.optJSONObject(i) ?: continue
+                    nativeCursors[c.optString("handle")] = c
+                }
+                for (i in 0 until cursors.length()) {
+                    val c = cursors.optJSONObject(i) ?: continue
+                    val n = nativeCursors[c.optString("handle")] ?: continue
+                    val nativeSinceId = n.optString("sinceId")
+                    if (n.optLong("lastPolledAt") > c.optLong("lastPolledAt") &&
+                        nativeSinceId.isNotEmpty() && nativeSinceId != "null"
+                    ) {
+                        c.put("sinceId", nativeSinceId)
+                        c.put("lastPolledAt", n.optLong("lastPolledAt"))
+                    }
+                }
+            }
+            prefs.edit().putString(KEY_STATE, incoming.toString()).apply()
         }
     }
 

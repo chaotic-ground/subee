@@ -119,6 +119,13 @@ class MainActivity : Activity() {
                 }
             }
 
+        if (SyncStore(applicationContext).backgroundSyncEnabled) {
+            FeedSyncScheduler.ensureScheduled(applicationContext)
+            // The worker silently drops its notification without this
+            // permission, and it can be revoked after it was first granted.
+            ensureNotificationPermission()
+        }
+
         if (savedInstanceState == null) {
             webView.loadUrl(APP_URL)
         } else {

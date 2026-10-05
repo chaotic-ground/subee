@@ -17,17 +17,32 @@ object FeedSyncScheduler {
     fun schedule(context: Context) {
         val request =
             PeriodicWorkRequestBuilder<FeedSyncWorker>(INTERVAL_HOURS, TimeUnit.HOURS)
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        // Don't spend battery prefetching when it's already low.
-                        .setRequiresBatteryNotLow(true)
-                        .build(),
-                )
+                .setConstraints(constraints())
                 .build()
         WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
+
+    /**
+     * Re-enqueue on app launch when background sync is on, without resetting
+     * the existing schedule (KEEP). Heals a periodic job that was dropped, e.g.
+     * by an OEM battery manager clearing scheduled jobs.
+     */
+    fun ensureScheduled(context: Context) {
+        val request =
+            PeriodicWorkRequestBuilder<FeedSyncWorker>(INTERVAL_HOURS, TimeUnit.HOURS)
+                .setConstraints(constraints())
+                .build()
+        WorkManager.getInstance(context)
+            .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    private fun constraints() =
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            // Don't spend battery prefetching when it's already low.
+            .setRequiresBatteryNotLow(true)
+            .build()
 
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
