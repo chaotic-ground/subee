@@ -5,6 +5,7 @@ import {
 	lookupAccount,
 	PAGE_SIZE,
 	parseHandle,
+	RateLimitError,
 } from "../mastodon";
 import {
 	consumeNativeSyncResults,
@@ -13,7 +14,9 @@ import {
 } from "../native/android";
 import {
 	type AccountCursor,
+	isLookupRetryDue,
 	loadCursorCache,
+	lookupFailureTombstone,
 	saveCursorCache,
 } from "../storage/cursors";
 import {
@@ -177,12 +180,27 @@ export function useSubscribedFeed(
 		});
 	}, [instanceUrl]);
 
+	// Subscribed handles whose earlier lookup failed transiently and is due for
+	// another try. Held back while the instance has us rate limited.
+	const retryDueHandles = useCallback((): string[] => {
+		const now = Date.now();
+		if (now < rateLimitedUntilRef.current) return [];
+		return [...handlesRef.current].filter((h) => {
+			const c = cursorsRef.current.get(h);
+			return c !== undefined && isLookupRetryDue(c, now);
+		});
+	}, []);
+
 	// Resolve account IDs for subscribed handles that don't have a cursor yet —
-	// the first load after login, or accounts added by subscribe/import. Merges
-	// into cursorsRef (never wipes existing cursors) and returns how many new
-	// accounts were resolved. Only ever called from an explicit user load.
+	// the first load after login, or accounts added by subscribe/import — plus
+	// failed lookups due for a retry. Merges into cursorsRef (never wipes
+	// existing cursors) and returns how many accounts were resolved. Only ever
+	// called from an explicit user load.
 	const resolveMissingCursors = useCallback(async (): Promise<number> => {
-		const missing = [...handles].filter((h) => !cursorsRef.current.has(h));
+		const missing = [
+			...[...handles].filter((h) => !cursorsRef.current.has(h)),
+			...retryDueHandles(),
+		];
 		if (missing.length === 0) return 0;
 
 		setAccountStatuses((prev) => {
@@ -210,29 +228,28 @@ export function useSubscribedFeed(
 					});
 					resolved++;
 					setAccountStatuses((prev) => new Map(prev).set(handle, "loading"));
-				} catch {
+				} catch (e) {
+					// Tombstone the handle so it isn't treated as pending forever (and
+					// a later cache restore still covers it). A transient failure's
+					// tombstone carries a retryAt, so a later load tries again.
+					cursorsRef.current.set(
+						handle,
+						lookupFailureTombstone(handle, instanceUrl, e),
+					);
+					if (e instanceof RateLimitError)
+						rateLimitedUntilRef.current = Math.max(
+							rateLimitedUntilRef.current,
+							Date.now() + e.retryAfterMs,
+						);
 					setAccountStatuses((prev) => new Map(prev).set(handle, "failed"));
 				}
 			}),
 			FEED_CONCURRENCY,
 		);
 
-		// Tombstone handles whose lookup failed so they aren't treated as pending
-		// forever (and a later cache restore still covers them).
-		for (const handle of missing) {
-			if (!cursorsRef.current.has(handle)) {
-				cursorsRef.current.set(handle, {
-					accountId: "",
-					instanceUrl,
-					handle,
-					done: true,
-				});
-			}
-		}
-
 		initializedRef.current = true;
 		return resolved;
-	}, [handles, instanceUrl, accessToken]);
+	}, [handles, instanceUrl, accessToken, retryDueHandles]);
 
 	const poll = useCallback(async () => {
 		if (pollingRef.current || loadingRef.current || !initializedRef.current)
@@ -309,7 +326,9 @@ export function useSubscribedFeed(
 				(c) => !c.done && c.accountId,
 			);
 			const hasMissing =
-				resolve && [...handles].some((h) => !cursorsRef.current.has(h));
+				resolve &&
+				([...handles].some((h) => !cursorsRef.current.has(h)) ||
+					retryDueHandles().length > 0);
 			if (!hasPending && !hasMissing) return;
 			loadingRef.current = true;
 			setLoading(true);
@@ -408,6 +427,7 @@ export function useSubscribedFeed(
 			instanceUrl,
 			accessToken,
 			resolveMissingCursors,
+			retryDueHandles,
 			flush,
 			pruneUnsubscribed,
 		],
@@ -472,15 +492,20 @@ export function useSubscribedFeed(
 	// Refresh button. Nothing loads automatically at app open. If any subscribed
 	// account hasn't been loaded yet (first load after login, or a freshly
 	// subscribed/imported account) it resolves and fetches them; otherwise it
-	// polls known accounts for new posts.
+	// polls known accounts for new posts, then retries lookups that failed
+	// transiently (their first page lands in "N new" like any other).
 	const refresh = useCallback(async () => {
 		if (loadingRef.current || pollingRef.current) return;
 		const needLoad =
 			!initializedRef.current ||
 			[...handles].some((h) => !cursorsRef.current.has(h));
-		if (needLoad) await fetchMore();
-		else await poll();
-	}, [handles, fetchMore, poll]);
+		if (needLoad) {
+			await fetchMore();
+			return;
+		}
+		await poll();
+		if (retryDueHandles().length > 0) await fetchMore();
+	}, [handles, fetchMore, poll, retryDueHandles]);
 
 	const flushBuffer = useCallback(() => {
 		if (bufferRef.current.length === 0) return;

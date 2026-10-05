@@ -21,6 +21,8 @@
 1. 아직 커서가 없는 구독 계정이 있으면(로그인 첫 로드, subscribe/import로 새로 추가된 계정) → 그 계정만 `resolveMissingCursors`로 resolve 후 초기 게시물 fetch. **grid는 이 명시적 로드 중에만** 표시. 빈 피드면 피드에 직접 채우고, 이미 글이 있으면 "N new" 버퍼로. 아직 로드 안 된 계정이 있으면 플로팅 버튼이 **"Load N accounts"**로 떠 로드가 대기 중임을 알림(`unloadedCount`, 커서 복원 완료 후에만 표시해 재오픈 시 깜빡임 없음).
 2. 모든 구독 계정이 이미 로드돼 있으면 → 기존 계정을 poll해 새 글을 "N new" 버퍼로(`N/total` pill, grid 없음).
 
+계정 조회(`lookupAccount`) 실패: 계정이 없음(404/410)이면 커서 캐시 만료(7일)까지 재시도하지 않음. 일시적 실패(네트워크·5xx·429)는 tombstone에 `retryAt`(5분 뒤, 429면 그 backoff 뒤)을 남기고, 그 시각이 지난 뒤의 `refresh()`가 다시 조회함(2번 분기에서는 폴링 후 재조회, 성공하면 첫 페이지가 "N new" 버퍼로). 재조회 대기 계정은 'Load N accounts' 수에 포함하지 않음.
+
 빈 상태 메시지: 구독이 아예 없으면 **"No subscriptions yet"**, 구독은 있는데 아직 로드 전이면 **"Slide to load"**(당겨서 새로고침 또는 'Load N accounts' 버튼 안내).
 
 ## 피드 새로고침 흐름
