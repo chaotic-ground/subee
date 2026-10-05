@@ -52,13 +52,17 @@ class FeedSyncWorker(
             for (i in 0 until cursors.length()) {
                 val cursor = cursors.optJSONObject(i) ?: continue
                 val handle = cursor.optString("handle")
-                val sinceId = cursor.optString("sinceId")
+                // JSON null reads back as the string "null" via optString.
+                val sinceId = cursor.optString("sinceId").takeUnless { it == "null" }.orEmpty()
                 val accountId = cursor.optString("accountId")
                 val instanceUrl = cursor.optString("instanceUrl").trimEnd('/')
+                // A failed lookup leaves an empty accountId; nothing to poll yet.
                 if (handle.isEmpty() || accountId.isEmpty() || instanceUrl.isEmpty()) continue
-                // Accounts without a sinceId have never been loaded in-app;
-                // leave them to the foreground initial fetch.
-                if (sinceId.isEmpty() || sinceId == "null") continue
+                // An account without a sinceId (it had no posts when first
+                // loaded, or that first fetch failed) is polled without
+                // since_id, and its newest page sets the cursor — same as
+                // src/sync/pollFeed.ts. Skipping it would leave it unpolled in
+                // the background until a foreground pull-to-refresh.
                 try {
                     val posts = fetchStatuses(instanceUrl, accountId, sinceId, accessToken)
                     val update =
@@ -100,7 +104,8 @@ class FeedSyncWorker(
         sinceId: String,
         accessToken: String,
     ): JSONArray {
-        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?since_id=$sinceId&limit=$PAGE_SIZE")
+        val since = if (sinceId.isEmpty()) "" else "since_id=$sinceId&"
+        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?${since}limit=$PAGE_SIZE")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = TIMEOUT_MS
         conn.readTimeout = TIMEOUT_MS
