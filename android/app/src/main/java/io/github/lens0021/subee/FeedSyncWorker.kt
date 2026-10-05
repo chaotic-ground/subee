@@ -52,19 +52,21 @@ class FeedSyncWorker(
             for (i in 0 until cursors.length()) {
                 val cursor = cursors.optJSONObject(i) ?: continue
                 val handle = cursor.optString("handle")
-                val sinceId = cursor.optString("sinceId")
+                // JSON null reads back as the string "null" via optString.
+                val sinceId = cursor.optString("sinceId").takeUnless { it == "null" }.orEmpty()
                 val accountId = cursor.optString("accountId")
                 val instanceUrl = cursor.optString("instanceUrl").trimEnd('/')
+                // A failed lookup leaves an empty accountId; nothing to poll yet.
                 if (handle.isEmpty() || accountId.isEmpty() || instanceUrl.isEmpty()) continue
-                // Accounts without a sinceId have never been loaded in-app;
-                // leave them to the foreground initial fetch.
-                if (sinceId.isEmpty() || sinceId == "null") continue
                 // Page forward with min_id from the cursor: each page is the
                 // block right after the previous one, so an account that posted
                 // more than a page between runs is walked in full. since_id would
                 // return only the newest page and drop everything in between.
                 // Progress is recorded per page, so a failure midway keeps what
                 // was fetched and the next run resumes from there.
+                // An account without a sinceId (it had no posts when first
+                // loaded, or that first fetch failed) has nothing to page from:
+                // one newest page sets its cursor — same as src/sync/pollFeed.ts.
                 var minId = sinceId
                 var rateLimited = false
                 try {
@@ -79,8 +81,9 @@ class FeedSyncWorker(
                             JSONObject()
                                 .put("lastPolledAt", System.currentTimeMillis())
                                 .put("sinceId", minId)
-                        // A short page means we've reached the newest post.
-                        if (posts.length() < PAGE_SIZE) break
+                        // No cursor: one newest page is enough. Otherwise a short
+                        // page means we've reached the newest post.
+                        if (sinceId.isEmpty() || posts.length() < PAGE_SIZE) break
                     }
                     if (!updates.containsKey(handle)) {
                         updates[handle] =
@@ -117,7 +120,8 @@ class FeedSyncWorker(
         minId: String,
         accessToken: String,
     ): JSONArray {
-        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?min_id=$minId&limit=$PAGE_SIZE")
+        val min = if (minId.isEmpty()) "" else "min_id=$minId&"
+        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?${min}limit=$PAGE_SIZE")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = TIMEOUT_MS
         conn.readTimeout = TIMEOUT_MS

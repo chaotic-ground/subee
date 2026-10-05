@@ -92,7 +92,10 @@ class SyncStore(context: Context) {
             for (i in 0 until cursors.length()) {
                 val cursor = cursors.optJSONObject(i) ?: continue
                 val update = cursorUpdates[cursor.optString("handle")] ?: continue
-                cursor.put("sinceId", update.getString("sinceId"))
+                // An account polled without a sinceId that returned nothing
+                // still has none; keep it absent rather than storing "".
+                val sinceId = update.optString("sinceId")
+                if (sinceId.isNotEmpty()) cursor.put("sinceId", sinceId)
                 cursor.put("lastPolledAt", update.getLong("lastPolledAt"))
             }
 
