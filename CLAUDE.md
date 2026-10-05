@@ -73,5 +73,7 @@
 
 - `android/` — WebView 래퍼 앱. `npm run build:android`가 웹 빌드를 `android/app/src/main/assets/www`로 출력하고, `WebViewAssetLoader`가 `https://appassets.androidplatform.net/`으로 서빙.
 - 브리지: 웹 `src/native/android.ts` ↔ 네이티브 `SubeeBridge.kt` (`window.SubeeAndroid`). 웹이 auth와 계정별 커서를 push(`updateSyncState`)하면 네이티브 `FeedSyncWorker`(WorkManager, 1시간 주기)가 폴링해 알림을 띄우고, 앱 시작 시 웹이 `consumeSyncResults`로 새 글과 커서 갱신을 가져와 캐시에 병합.
+- 당겨서 새로고침 폴링 중 앱을 떠나면(`onStop`) 웹이 `setForegroundSyncActive`로 알려둔 플래그를 보고 네이티브가 일회성 `FeedSyncWorker`(handoff)를 띄워 폴링을 마저 하고 새 글이 있으면 알림(주기 동기화가 꺼져 있어도). 커서가 없는 미로드 계정은 대상 아님.
+- 웹 커서 캐시가 없거나 만료됐을 때는 네이티브 상태를 덮어쓰지 않음(빈 커서 push로 워커가 조용히 멈추는 것 방지). 네이티브 `saveState`는 워커가 더 최근에 앞당긴 `sinceId`를 유지.
 - OAuth는 WebView 안에서 진행됨. redirect_uri가 appassets origin이라 외부 브라우저로 빼면 돌아올 수 없음.
 - 빌드 순서: `npm run build:android` → `cd android && ./gradlew assembleDebug`. CI는 `.github/workflows/android.yaml`이 `subee-debug` artifact 업로드.
