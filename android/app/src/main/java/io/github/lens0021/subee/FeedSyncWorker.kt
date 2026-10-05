@@ -27,7 +27,8 @@ class FeedSyncWorker(
     override suspend fun doWork(): Result =
         withContext(Dispatchers.IO) {
             val store = SyncStore(applicationContext)
-            if (!store.backgroundSyncEnabled) return@withContext Result.success()
+            val handoff = inputData.getBoolean(KEY_HANDOFF, false)
+            if (!handoff && !store.backgroundSyncEnabled) return@withContext Result.success()
             val state = store.loadState() ?: return@withContext Result.success()
             val accessToken = state.optString("accessToken")
             val cursors = state.optJSONArray("cursors") ?: JSONArray()
@@ -142,6 +143,7 @@ class FeedSyncWorker(
     }
 
     companion object {
+        const val KEY_HANDOFF = "handoff"
         private const val PAGE_SIZE = 20
         private const val TIMEOUT_MS = 15_000
         private const val HTTP_TOO_MANY_REQUESTS = 429

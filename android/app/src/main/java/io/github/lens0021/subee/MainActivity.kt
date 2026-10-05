@@ -21,6 +21,9 @@ import androidx.webkit.WebViewFeature
 class MainActivity : Activity() {
     private lateinit var webView: WebView
 
+    // Set by the web app (via SubeeBridge) while a pull-to-refresh poll runs.
+    @Volatile var foregroundSyncActive = false
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,6 +154,14 @@ class MainActivity : Activity() {
     override fun onPause() {
         if (::webView.isInitialized) webView.onPause()
         super.onPause()
+    }
+
+    override fun onStop() {
+        // Leaving mid-refresh: the WebView's requests stall in the background,
+        // so the user would come back to nothing. Let the native worker finish
+        // the poll and notify instead.
+        if (foregroundSyncActive) FeedSyncScheduler.handOff(applicationContext)
+        super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

@@ -34,6 +34,12 @@ class SubeeBridge(private val activity: MainActivity) {
         }
     }
 
+    /** The web app is polling in the foreground; see MainActivity.onStop. */
+    @JavascriptInterface
+    fun setForegroundSyncActive(active: Boolean) {
+        activity.foregroundSyncActive = active
+    }
+
     @JavascriptInterface
     fun getBackgroundSync(): Boolean = store.backgroundSyncEnabled
 

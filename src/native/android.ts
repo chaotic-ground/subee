@@ -16,6 +16,7 @@ interface SubeeAndroidBridge {
 	updateSyncState(json: string): void;
 	clearSyncState(): void;
 	setBackgroundSync(enabled: boolean): void;
+	setForegroundSyncActive(active: boolean): void;
 	getBackgroundSync(): boolean;
 	consumeSyncResults(): string;
 }
@@ -96,6 +97,18 @@ export function getNativeBackgroundSync(): boolean {
 export function setNativeBackgroundSync(enabled: boolean): void {
 	try {
 		bridge()?.setBackgroundSync(enabled);
+	} catch {
+		// ignore
+	}
+}
+
+/**
+ * Tell the native side a foreground poll is running, so leaving the app
+ * mid-poll hands it off to the background worker instead of stalling.
+ */
+export function setNativeForegroundSyncActive(active: boolean): void {
+	try {
+		bridge()?.setForegroundSyncActive(active);
 	} catch {
 		// ignore
 	}

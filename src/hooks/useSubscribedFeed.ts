@@ -9,6 +9,7 @@ import {
 import {
 	consumeNativeSyncResults,
 	pushNativeSyncState,
+	setNativeForegroundSyncActive,
 } from "../native/android";
 import {
 	type AccountCursor,
@@ -216,6 +217,7 @@ export function useSubscribedFeed(
 		// Honor a 429 backoff so we stay gentle on the home instance.
 		if (Date.now() < rateLimitedUntilRef.current) return;
 		pollingRef.current = true;
+		setNativeForegroundSyncActive(true);
 		try {
 			const { newPosts, rateLimitedUntil } = await pollFeed({
 				instanceUrl,
@@ -257,6 +259,7 @@ export function useSubscribedFeed(
 				setStagedCount(bufferRef.current.length);
 			}
 		} finally {
+			setNativeForegroundSyncActive(false);
 			pollingRef.current = false;
 			setPollProgress(null);
 		}
