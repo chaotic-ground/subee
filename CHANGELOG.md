@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.19.1](https://github.com/chaotic-ground/subee/compare/v0.19.0...v0.19.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **android:** hand an interrupted pull-to-refresh off to the worker ([252dcf2](https://github.com/chaotic-ground/subee/commit/252dcf2ba721454052f83f39997d06eec7da3243))
+* **android:** keep background sync alive across stale web pushes ([7d06b13](https://github.com/chaotic-ground/subee/commit/7d06b138bef0c39f8fee4c20c44c4912c6ae6ed0))
+* **android:** keep background sync alive and finish interrupted refreshes ([16e0888](https://github.com/chaotic-ground/subee/commit/16e0888fa4a1f582ba5f35ec05a0beafc2326181))
+* **android:** poll accounts without a sinceId in the background worker ([8dc066c](https://github.com/chaotic-ground/subee/commit/8dc066cbfb07e0335fb65d48c6cc760943ec60f2))
+* **android:** poll accounts without a sinceId in the background worker ([19b1d61](https://github.com/chaotic-ground/subee/commit/19b1d611f73c5940c898e5b221683efe646eb072))
+* page polls forward with min_id so no posts are skipped ([fa6e579](https://github.com/chaotic-ground/subee/commit/fa6e5793d29a33496c8543e4febafa2d2b2d0e42))
+* page polls forward with min_id so no posts are skipped ([bc2662e](https://github.com/chaotic-ground/subee/commit/bc2662e9c88d856c18bb3562ff6a48c1ace929b1))
+* retry account lookups that failed transiently ([fd222e6](https://github.com/chaotic-ground/subee/commit/fd222e6402a363b8cdc57474a9a8186576212f9f))
+* retry account lookups that failed transiently ([60983c0](https://github.com/chaotic-ground/subee/commit/60983c02e9724e0245acf5360521d0fb08e49f1e))
+* stop wasted polling and implicit loads in the feed ([647d420](https://github.com/chaotic-ground/subee/commit/647d4203e79c3217fcffe228be305fd426da3967))
+* stop wasted polling and implicit loads in the feed ([e4cf514](https://github.com/chaotic-ground/subee/commit/e4cf514911a8ddb409dccb1dcf00ecb284fa0453))
+
 ## [0.19.0](https://github.com/chaotic-ground/subee/compare/v0.18.1...v0.19.0) (2026-06-27)
 
 
