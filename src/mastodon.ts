@@ -230,7 +230,12 @@ export async function lookupAccount(
 export async function fetchAccountStatuses(
 	instanceUrl: string,
 	accountId: string,
-	params?: { maxId?: string; sinceId?: string; limit?: number },
+	params?: {
+		maxId?: string;
+		sinceId?: string;
+		minId?: string;
+		limit?: number;
+	},
 	accessToken?: string,
 ): Promise<mastodon.v1.Status[]> {
 	const url = new URL(
@@ -238,6 +243,7 @@ export async function fetchAccountStatuses(
 	);
 	if (params?.maxId) url.searchParams.set("max_id", params.maxId);
 	if (params?.sinceId) url.searchParams.set("since_id", params.sinceId);
+	if (params?.minId) url.searchParams.set("min_id", params.minId);
 	url.searchParams.set("limit", String(params?.limit ?? PAGE_SIZE));
 	return apiFetch<mastodon.v1.Status[]>(url.toString(), accessToken);
 }

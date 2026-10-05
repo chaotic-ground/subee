@@ -63,7 +63,7 @@ describe("pollFeed", () => {
 		expect(mockFetchAccountStatuses).toHaveBeenCalledWith(
 			INSTANCE,
 			"a1",
-			{ sinceId: undefined, limit: 20 },
+			{ limit: 20 },
 			"tok",
 		);
 		expect(res.newPosts.map((p) => p.id)).toEqual(["a-first"]);
@@ -264,5 +264,74 @@ describe("pollFeed", () => {
 		// At most the initial concurrency window of requests went out; the rest
 		// were skipped after the 429.
 		expect(mockFetchAccountStatuses.mock.calls.length).toBeLessThan(5);
+	});
+
+	it("pages forward with min_id until it catches up, losing nothing", async () => {
+		// An account posted 45 times since the last poll. min_id returns the
+		// page right after the cursor (newest-first within the page), so paging
+		// forward from each page's newest id walks the whole gap.
+		await saveCursorCache(INSTANCE, [
+			[
+				"@a@test.example",
+				{
+					handle: "@a@test.example",
+					accountId: "a1",
+					instanceUrl: INSTANCE,
+					sinceId: "100",
+					done: true,
+				},
+			],
+		]);
+		const all = Array.from({ length: 45 }, (_, i) =>
+			makeStatus(String(101 + i), "2026-02-01T00:00:00Z"),
+		);
+		mockFetchAccountStatuses.mockImplementation(async (_u, _a, params) => {
+			const min = Number(params?.minId);
+			return all
+				.filter((s) => Number(s.id) > min)
+				.slice(0, params?.limit ?? 20)
+				.reverse();
+		});
+
+		const res = await pollFeed({ instanceUrl: INSTANCE, accessToken: "tok" });
+
+		expect(res.newPosts).toHaveLength(45);
+		expect(new Set(res.newPosts.map((p) => p.id)).size).toBe(45);
+		expect(mockFetchAccountStatuses.mock.calls.map((c) => c[2])).toEqual([
+			{ minId: "100", limit: 20 },
+			{ minId: "120", limit: 20 },
+			{ minId: "140", limit: 20 },
+		]);
+		const saved = new Map((await loadCursorCache(INSTANCE)) ?? []);
+		expect(saved.get("@a@test.example")?.sinceId).toBe("145");
+	});
+
+	it("keeps pages fetched before a mid-paging rate limit", async () => {
+		await saveCursorCache(INSTANCE, [
+			[
+				"@a@test.example",
+				{
+					handle: "@a@test.example",
+					accountId: "a1",
+					instanceUrl: INSTANCE,
+					sinceId: "100",
+					done: true,
+				},
+			],
+		]);
+		const firstPage = Array.from({ length: 20 }, (_, i) =>
+			makeStatus(String(120 - i), "2026-02-01T00:00:00Z"),
+		);
+		mockFetchAccountStatuses
+			.mockResolvedValueOnce(firstPage)
+			.mockRejectedValueOnce(new RateLimitError(60_000));
+
+		const res = await pollFeed({ instanceUrl: INSTANCE, accessToken: "tok" });
+
+		expect(res.newPosts).toHaveLength(20);
+		expect(res.rateLimitedUntil).toBeDefined();
+		const saved = new Map((await loadCursorCache(INSTANCE)) ?? []);
+		// The next poll resumes right after what was already fetched.
+		expect(saved.get("@a@test.example")?.sinceId).toBe("120");
 	});
 });
