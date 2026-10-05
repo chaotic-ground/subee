@@ -14,7 +14,7 @@ import {
 test("does not poll on reopen — cached feed shows, no loading", async ({
 	page,
 }) => {
-	// If an on-open poll fired, the since_id route would serve these as "N new".
+	// If an on-open poll fired, the poll (min_id) route would serve these as "N new".
 	await mockFeed(page, { since: freshOnce(makeFresh(5)) });
 	await authAndSubscribe(page);
 

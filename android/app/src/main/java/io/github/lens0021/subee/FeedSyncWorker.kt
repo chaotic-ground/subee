@@ -17,8 +17,8 @@ private class RateLimitException(val retryAfterMs: Long) : Exception()
 /**
  * Polls subscribed accounts for new posts while the app is closed,
  * mirroring src/sync/pollFeed.ts of the web app: one
- * GET /api/v1/accounts/{id}/statuses?since_id=... per account, all routed
- * through the user's own instance.
+ * GET /api/v1/accounts/{id}/statuses?min_id=... per account, paged forward
+ * until caught up, all routed through the user's own instance.
  */
 class FeedSyncWorker(
     appContext: Context,
@@ -58,33 +58,49 @@ class FeedSyncWorker(
                 val instanceUrl = cursor.optString("instanceUrl").trimEnd('/')
                 // A failed lookup leaves an empty accountId; nothing to poll yet.
                 if (handle.isEmpty() || accountId.isEmpty() || instanceUrl.isEmpty()) continue
+                // Page forward with min_id from the cursor: each page is the
+                // block right after the previous one, so an account that posted
+                // more than a page between runs is walked in full. since_id would
+                // return only the newest page and drop everything in between.
+                // Progress is recorded per page, so a failure midway keeps what
+                // was fetched and the next run resumes from there.
                 // An account without a sinceId (it had no posts when first
-                // loaded, or that first fetch failed) is polled without
-                // since_id, and its newest page sets the cursor — same as
-                // src/sync/pollFeed.ts. Skipping it would leave it unpolled in
-                // the background until a foreground pull-to-refresh.
+                // loaded, or that first fetch failed) has nothing to page from:
+                // one newest page sets its cursor — same as src/sync/pollFeed.ts.
+                var minId = sinceId
+                var rateLimited = false
                 try {
-                    val posts = fetchStatuses(instanceUrl, accountId, sinceId, accessToken)
-                    val update =
-                        JSONObject()
-                            .put("lastPolledAt", System.currentTimeMillis())
-                            .put(
-                                "sinceId",
-                                if (posts.length() > 0) posts.getJSONObject(0).getString("id") else sinceId,
-                            )
-                    for (j in 0 until posts.length()) {
-                        fetched.add(posts.getJSONObject(j))
+                    for (page in 0 until MAX_POLL_PAGES) {
+                        val posts = fetchStatuses(instanceUrl, accountId, minId, accessToken)
+                        if (posts.length() == 0) break
+                        for (j in 0 until posts.length()) {
+                            fetched.add(posts.getJSONObject(j))
+                        }
+                        minId = posts.getJSONObject(0).getString("id")
+                        updates[handle] =
+                            JSONObject()
+                                .put("lastPolledAt", System.currentTimeMillis())
+                                .put("sinceId", minId)
+                        // No cursor: one newest page is enough. Otherwise a short
+                        // page means we've reached the newest post.
+                        if (sinceId.isEmpty() || posts.length() < PAGE_SIZE) break
                     }
-                    updates[handle] = update
+                    if (!updates.containsKey(handle)) {
+                        updates[handle] =
+                            JSONObject()
+                                .put("lastPolledAt", System.currentTimeMillis())
+                                .put("sinceId", sinceId)
+                    }
                 } catch (e: RateLimitException) {
                     // The home instance is rate-limiting us. Every account hits
                     // the same instance, so stop polling the rest this run and
                     // hold off until it says we may try again.
                     store.rateLimitedUntil = System.currentTimeMillis() + e.retryAfterMs
-                    break
+                    rateLimited = true
                 } catch (_: Exception) {
-                    // skip this account until the next run
+                    // skip the rest of this account until the next run
                 }
+                if (rateLimited) break
             }
 
             if (updates.isNotEmpty()) {
@@ -101,11 +117,11 @@ class FeedSyncWorker(
     private fun fetchStatuses(
         instanceUrl: String,
         accountId: String,
-        sinceId: String,
+        minId: String,
         accessToken: String,
     ): JSONArray {
-        val since = if (sinceId.isEmpty()) "" else "since_id=$sinceId&"
-        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?${since}limit=$PAGE_SIZE")
+        val min = if (minId.isEmpty()) "" else "min_id=$minId&"
+        val url = URL("$instanceUrl/api/v1/accounts/$accountId/statuses?${min}limit=$PAGE_SIZE")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = TIMEOUT_MS
         conn.readTimeout = TIMEOUT_MS
@@ -150,6 +166,11 @@ class FeedSyncWorker(
     companion object {
         const val KEY_HANDOFF = "handoff"
         private const val PAGE_SIZE = 20
+
+        // Cap pages per account per run so one prolific account can't stretch
+        // a run indefinitely. Nothing past it is lost: the cursor sits at the
+        // newest post fetched and the next run continues from there.
+        private const val MAX_POLL_PAGES = 10
         private const val TIMEOUT_MS = 15_000
         private const val HTTP_TOO_MANY_REQUESTS = 429
         private const val DEFAULT_RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000L

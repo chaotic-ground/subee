@@ -35,6 +35,59 @@ export interface PollFeedResult {
 	rateLimitedUntil?: number;
 }
 
+// Upper bound on pages fetched per account per poll, so one prolific account
+// can't monopolise a round. Anything beyond it is not lost: the cursor sits at
+// the newest post fetched, and the next poll continues from there.
+export const MAX_POLL_PAGES = 10;
+
+/**
+ * Fetch every status newer than the cursor, oldest page first.
+ *
+ * `min_id` (unlike `since_id`) returns the page immediately after the cursor,
+ * so paging forward with the newest id of each page walks the whole gap. With
+ * `since_id` and a 20-post limit, an account that posted more than 20 times
+ * between polls lost everything but its newest 20.
+ *
+ * A cursor without a sinceId (never had posts, or its first fetch failed) has
+ * nothing to page from; its newest page sets the cursor.
+ *
+ * Returns the number of statuses fetched; each page is handed to `onPage`
+ * (newest-first, non-empty) as it arrives.
+ */
+async function fetchNewStatuses(
+	cursor: AccountCursor,
+	accessToken: string,
+	onPage: (page: mastodon.v1.Status[]) => void,
+): Promise<number> {
+	if (!cursor.sinceId) {
+		const page = await fetchAccountStatuses(
+			cursor.instanceUrl,
+			cursor.accountId,
+			{ limit: PAGE_SIZE },
+			accessToken,
+		);
+		if (page.length > 0) onPage(page);
+		return page.length;
+	}
+	let minId = cursor.sinceId;
+	let total = 0;
+	for (let i = 0; i < MAX_POLL_PAGES; i++) {
+		const page = await fetchAccountStatuses(
+			cursor.instanceUrl,
+			cursor.accountId,
+			{ minId, limit: PAGE_SIZE },
+			accessToken,
+		);
+		if (page.length === 0) break;
+		onPage(page);
+		total += page.length;
+		// A short page means we've reached the newest post.
+		if (page.length < PAGE_SIZE) break;
+		minId = page[0].id;
+	}
+	return total;
+}
+
 export async function pollFeed({
 	instanceUrl,
 	accessToken,
@@ -85,18 +138,27 @@ export async function pollFeed({
 			}
 			onAccountStatus?.(cursor.handle, "loading");
 			try {
-				const results = await fetchAccountStatuses(
-					cursor.instanceUrl,
-					cursor.accountId,
-					{ sinceId: cursor.sinceId, limit: PAGE_SIZE },
+				const results = await fetchNewStatuses(
+					cursor,
 					accessToken,
+					// Record progress page by page so a 429 or network error midway
+					// still keeps what was already fetched; the next poll resumes
+					// from the newest of it instead of refetching or skipping.
+					(page) => {
+						newPosts.push(...page);
+						cursorMap.set(cursor.handle, {
+							...cursor,
+							sinceId: page[0].id,
+							lastPolledAt: Date.now(),
+						});
+					},
 				);
-				cursorMap.set(cursor.handle, {
-					...cursor,
-					...(results.length > 0 && { sinceId: results[0].id }),
-					lastPolledAt: Date.now(),
-				});
-				if (results.length > 0) newPosts.push(...results);
+				if (results === 0) {
+					cursorMap.set(cursor.handle, {
+						...cursor,
+						lastPolledAt: Date.now(),
+					});
+				}
 				onAccountStatus?.(cursor.handle, "done");
 			} catch (e) {
 				if (e instanceof RateLimitError) {
