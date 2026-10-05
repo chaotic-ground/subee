@@ -16,6 +16,7 @@ interface SubeeAndroidBridge {
 	updateSyncState(json: string): void;
 	clearSyncState(): void;
 	setBackgroundSync(enabled: boolean): void;
+	setForegroundSyncActive(active: boolean): void;
 	getBackgroundSync(): boolean;
 	consumeSyncResults(): string;
 }
@@ -50,7 +51,12 @@ export async function pushNativeSyncState(
 	const b = bridge();
 	if (!b) return;
 	try {
-		const cursors = (await loadCursorCache(instanceUrl)) ?? [];
+		const cursors = await loadCursorCache(instanceUrl);
+		// A missing cache (never loaded, or expired past its TTL because nothing
+		// in-app saved it for a week) must not wipe the cursors the native worker
+		// is still polling with — that silently stops background sync for good.
+		// Logout clears native state separately via clearNativeSyncState.
+		if (!cursors) return;
 		const payload = {
 			instanceUrl,
 			accessToken,
@@ -91,6 +97,18 @@ export function getNativeBackgroundSync(): boolean {
 export function setNativeBackgroundSync(enabled: boolean): void {
 	try {
 		bridge()?.setBackgroundSync(enabled);
+	} catch {
+		// ignore
+	}
+}
+
+/**
+ * Tell the native side a foreground poll is running, so leaving the app
+ * mid-poll hands it off to the background worker instead of stalling.
+ */
+export function setNativeForegroundSyncActive(active: boolean): void {
+	try {
+		bridge()?.setForegroundSyncActive(active);
 	} catch {
 		// ignore
 	}
